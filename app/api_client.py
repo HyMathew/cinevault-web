@@ -1,7 +1,21 @@
 """Client HTTP du service de données ; aucune mutation n'est rejouée."""
-from urllib.parse import quote
+from urllib.parse import quote,urlsplit
 
 import requests
+
+
+def safe_poster(value):
+    if not isinstance(value,dict) or any(not isinstance(value.get(k),str) for k in ('image_url','source_url','license_url','artist','license')):
+        return None
+    try:
+        image,source,license=(urlsplit(value[k]) for k in ('image_url','source_url','license_url'))
+    except ValueError:
+        return None
+    if any(url.scheme!='https' or url.query or url.fragment for url in (image,source,license)): return None
+    if image.netloc not in ('upload.wikimedia.org','thumb.wikimedia.org') or not image.path.startswith('/wikipedia/commons/'): return None
+    if source.netloc!='commons.wikimedia.org' or not source.path.startswith('/wiki/File:'): return None
+    if license.netloc not in ('creativecommons.org','commons.wikimedia.org') or len(value['artist'])>240: return None
+    return value
 
 
 class APIError(Exception):
@@ -17,8 +31,9 @@ class APIClient:
         self.enterprise = enterprise
 
     def request(self, method, path, **kwargs):
+        timeout=kwargs.pop('timeout',(2,5))
         try:
-            response = requests.request(method, self.base_url + path, timeout=(2, 5), allow_redirects=False, **kwargs)
+            response = requests.request(method, self.base_url + path, timeout=timeout, allow_redirects=False, **kwargs)
         except requests.RequestException as exc:
             raise APIError(503, "Le service de données est indisponible.") from exc
         if 300 <= response.status_code < 400:
@@ -54,6 +69,8 @@ class APIClient:
                 copies = self.copies(film_id)
                 view=self.movie_view(movie,copies=copies)
                 view['availability']=self.request('GET','/api/v1/availability',params={'movie_id':film_id})
+                if view.get('external_source'):
+                    view['poster']=self.posters([film_id]).get(film_id)
                 return view
             return self.request('GET', '/api/films/' + quote(film_id, safe=''))
         except APIError as exc:
@@ -65,14 +82,15 @@ class APIClient:
         if self.enterprise:
             body = self.movie_payload(data)
             body['initial_copy'] = {'support':data['support'],'location':'','condition':'unknown'}
-            movie = self.account_request(token,'POST','/movies',json=body)
+            movie = self.account_request(token,'POST','/movies',json=body,timeout=(2,25) if body.get('external_id') else (2,5))
             return self.movie_view(movie)
         return self.request('POST', '/api/films', json=data)
 
     def update(self, film_id, data, token='', version=''):
         if self.enterprise:
             movie = self.request('PUT','/api/v1/movies/'+quote(film_id,safe=''),
-                                 headers={'Authorization':'Bearer '+token,'If-Match':version},json=self.movie_payload(data))
+                                 headers={'Authorization':'Bearer '+token,'If-Match':version},json=self.movie_payload(data),
+                                 timeout=(2,25) if data.get('external_id') else (2,5))
             return self.movie_view(movie)
         return self.request('PUT', '/api/films/' + quote(film_id, safe=''), json=data)
 
@@ -85,20 +103,41 @@ class APIClient:
     @staticmethod
     def movie_view(movie, copies=None, summary=None):
         summary = summary or {'count':len(copies or []),'supports':list(dict.fromkeys(c['support'] for c in copies or []))}
-        return {'id':movie['id'],'titre':movie['title'],'annee':movie['year'],'realisateur':movie['director'],
+        return ({'id':movie['id'],'titre':movie['title'],'annee':movie['year'],'realisateur':movie['director'],
                 'acteurs':movie['actors'],'synopsis':movie['synopsis'],'genres':movie['genres'],'_etag':movie['_etag'],
                 'support':summary['supports'][0] if summary['supports'] else 'autre',
                 'copy_count':summary['count'],'copy_supports':summary['supports'],'copies':copies or []}
+                | ({'external_source':movie['external_source']} if 'external_source' in movie else {}))
 
     @staticmethod
     def movie_payload(data):
-        return {'title':data['titre'],'year':data['annee'],'director':data['realisateur'],
+        result={'title':data['titre'],'year':data['annee'],'director':data['realisateur'],
                 'actors':data['acteurs'],'synopsis':data['synopsis'],'genres':data.get('genres',[])}
+        if 'external_id' in data: result['external_id']=data['external_id']
+        return result
 
-    def search(self, **query):
+    def search(self, include_posters=False, **query):
         result = self.request('GET','/api/v1/movies',params={k:v for k,v in query.items() if v != ''})
-        return {'films':[self.movie_view(m,summary=result['copy_summaries'][m['id']]) for m in result['movies']],
-                'total':result['total'],'limit':result['limit'],'offset':result['offset']}
+        films=[self.movie_view(m,summary=result['copy_summaries'][m['id']]) for m in result['movies']]
+        if include_posters:
+            posters=self.posters([film['id'] for film in films if film.get('external_source')])
+            for film in films: film['poster']=posters.get(film['id'])
+        return {'films':films,'total':result['total'],'limit':result['limit'],'offset':result['offset']}
+
+    def posters(self,identities):
+        if not identities: return {}
+        try:
+            result=self.request('GET','/api/v1/posters',params=[('movie_id',identity) for identity in identities])
+            values=result.get('posters',{}) if isinstance(result,dict) else {}
+            return {key:poster for key,value in values.items() if key in identities and (poster:=safe_poster(value)) is not None} if isinstance(values,dict) else {}
+        except APIError:
+            return {}
+
+    def metadata_search(self,token,query):
+        return self.account_request(token,'GET','/metadata/search',params={'q':query},timeout=(2,25))
+
+    def metadata_detail(self,token,identity):
+        return self.account_request(token,'GET','/metadata/'+quote(identity,safe=''),timeout=(2,25))
 
     def copies(self, movie_id):
         return self.request('GET','/api/v1/copies',params={'movie_id':movie_id})['copies']

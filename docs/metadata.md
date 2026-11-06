@@ -1,0 +1,11 @@
+# Recherche externe et affiches
+
+Le formulaire de film et la fiche de gestion proposent une recherche Wikidata. `/metadonnees?q=...` affiche les résultats ; `/metadonnees/<QID>` montre une proposition, sa source, ses avertissements et les conditions de l'affiche éventuelle. Ces routes exigent un gestionnaire/administrateur, avec droits revérifiés par l'API. L'application reste utilisable manuellement lorsque le fournisseur est désactivé ou indisponible.
+
+Le bouton « Préremplir le formulaire » n'enregistre rien : il ouvre la création/modification ordinaire avec les champs proposés. Le gestionnaire les revoit avant soumission. Un synopsis existant n'est pas remplacé par la description courte du fournisseur. Les modifications gardent If-Match ; les POST gardent CSRF. Le champ caché transmet le QID sélectionné, l'API calcule elle-même la provenance. Une case explicite retire la référence ; une case non cochée n'est pas envoyée. Omettre toute sélection permet de corriger un film sans dépendre du fournisseur.
+
+La provenance reste une référence sélectionnée ; les champs peuvent avoir été édités. Une annotation peut être retirée sans supprimer le film ou ses exemplaires. Les erreurs 429/503 conservent la saisie ; aucun nouvel envoi automatique. Les seuls appels susceptibles d'attendre le fournisseur ont un timeout de lecture 25 s ; les autres conservent 5 s.
+
+Les fiches/catalogue demandent au backend les affiches par JSON, sans fichier partagé. Le backend utilise seulement son cache frais pour la révision sélectionnée. Les URI sont contrôlées des deux côtés et la CSP n'autorise comme domaines d'image externes que upload.wikimedia.org et thumb.wikimedia.org. Les images sont chargées par le navigateur, sans cookie d'authentification du site envoyé au fournisseur, avec referrerpolicy=no-referrer. Artiste, indication de licence et lien de source restent visibles. Une défaillance de ce seul enrichissement ne bloque pas le catalogue.
+
+Tests web isolés avec API simulée et parcours HTTP Compose réel sont distincts. Le rendu HTML avec URI/attribution ne prouve pas le chargement visuel de l'image par Chrome ; ce contrôle et les résolutions/clavier restent à vérifier. Les licences déclarées par Commons restent des informations de source, pas une garantie juridique universelle.

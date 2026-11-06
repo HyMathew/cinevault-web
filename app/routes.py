@@ -36,8 +36,10 @@ def home():
 @pages.get('/films')
 def catalogue():
     if enterprise():
+        if set(request.args)-{'q','genre','year','support','sort','limit','offset'} or any(len(request.args.getlist(key))!=1 for key in request.args):
+            abort(422)
         query = request.args.to_dict()
-        result = api().search(**query)
+        result = api().search(include_posters=True,**query)
         return render_template('enterprise_catalogue.html', **result, query=query)
     q = request.args.get('q', '').strip()
     support = request.args.get('support', '')
@@ -69,6 +71,18 @@ def film_form(film_id=None):
         values['acteurs'] = ', '.join(values.get('acteurs', []))
     errors = {}
     message = None
+    if enterprise() and request.method=='GET' and request.args.get('metadata_id'):
+        try:
+            metadata=api().metadata_detail(auth_token(),request.args['metadata_id'])['film']
+        except APIError as exc:
+            if exc.status not in (422,429,503): raise
+            message='La proposition externe est indisponible. Vos données restent présentes ; vous pouvez continuer manuellement.'
+        else:
+            values.update({key:value for key,value in {'titre':metadata['title'],'annee':metadata['year'],
+                'realisateur':metadata['director'],'acteurs':', '.join(metadata['actors']),'genres':metadata['genres']}.items() if value})
+            if not values.get('synopsis'): values['synopsis']=metadata['description']
+            values['external_id']=metadata['id']
+            message='Proposition Wikidata préremplie. Vérifiez les champs et complétez le résumé avant enregistrement.'
     if request.method == 'POST':
         values = request.form.to_dict()
         form_data = request.form.to_dict()
@@ -77,6 +91,8 @@ def film_form(film_id=None):
         data, errors = validate(form_data)
         if enterprise():
             data['genres'] = [x.strip() for x in request.form.get('genres','').split(',') if x.strip()]
+            if request.form.get('clear_external')=='1': data['external_id']=None
+            elif request.form.get('external_id'): data['external_id']=request.form['external_id']
         if not errors:
             try:
                 if enterprise():
@@ -88,7 +104,9 @@ def film_form(film_id=None):
                     raise
                 if exc.status == 404:
                     abort(404)
-                if enterprise() and exc.status in (409,412,428):
+                if enterprise() and exc.status in (409,412,428,429):
+                    if exc.status==429:
+                        return render_template(template,editing=editing,values=values,errors={},message='Le fournisseur limite les demandes. Vos champs sont conservés ; réessayez plus tard.'),429
                     message = 'Ce film existe déjà.' if exc.status == 409 else 'Ce film a changé. Vos champs sont conservés ; rechargez sa fiche et comparez les modifications avant de réessayer.'
                     return render_template(template,editing=editing,values=values,errors={},message=message),exc.status
                 if exc.status == 422:

@@ -55,12 +55,14 @@ def create_app(config=None):
         app.register_blueprint(transfer_bp)
         from .insights import bp as insights_bp
         app.register_blueprint(insights_bp)
+        from .metadata_views import bp as metadata_bp
+        app.register_blueprint(metadata_bp)
 
     @app.after_request
     def security_headers(response):
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Referrer-Policy'] = 'same-origin'
-        response.headers['Content-Security-Policy'] = "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+        response.headers['Content-Security-Policy'] = "default-src 'self'; img-src 'self' https://upload.wikimedia.org https://thumb.wikimedia.org; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
         return response
 
     @app.errorhandler(APIError)

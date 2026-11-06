@@ -1,10 +1,14 @@
 # CineVault Web
 
-Service de présentation Flask/Jinja de la vidéothèque CineVault. Il appelle une API HTTP séparée, n'écrit pas le fichier JSON et ne comprend aucune authentification utilisateur. À réserver à un réseau de confiance ou protéger par un contrôle d'accès adapté avant toute exposition publique.
+Service de présentation Flask/Jinja de CineVault. Il appelle une API HTTP séparée et n'écrit jamais le fichier JSON. Le mode pédagogique legacy est actif par défaut ; `ENTERPRISE_ENABLED=true` active les comptes, le catalogue partagé, les exemplaires, les collections privées et les prêts, lorsque le backend est configuré au même mode. TLS, réservations et autres extensions restent à compléter avant la livraison finale.
+
+Documentation : [comptes et transmission de l'identité](docs/accounts.md), [collections privées](docs/collections.md), [prêts et retours](docs/loans.md). L'API demeure l'autorité pour les permissions et les règles métier ; le frontend ne transmet aucun rôle ou propriétaire comme preuve d'identité.
 
 ## Configuration
 
 - `SECRET_KEY` : obligatoire, valeur aléatoire persistante et confidentielle ; ne jamais la versionner.
+- `SECRET_KEY_FILE` : fichier privé d'au moins 32 octets, prioritaire sur `SECRET_KEY` ; utilisé par le mode Compose de test Enterprise.
+- `ENTERPRISE_ENABLED=true` : active les routes et écrans Enterprise ; configurer aussi le backend avant activation.
 - `API_URL` : URL interne de l'API, `http://cinevault-api:8000` par défaut ; ajuster selon le DNS de la stack.
 - `COOKIE_SECURE=true` : à activer lorsque le navigateur accède au service par HTTPS.
 

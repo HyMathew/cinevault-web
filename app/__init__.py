@@ -65,7 +65,7 @@ def create_app(config=None):
         title, message = {
             401:('Connexion requise','Votre session a expiré. Connectez-vous à nouveau.'),
             403:('Accès interdit','Votre rôle ne permet pas cette action.'),
-            404:('Film introuvable','La ressource demandée est introuvable.'),
+            404:('Élément introuvable','L’élément demandé est introuvable ou n’est pas accessible.'),
             409:('Opération impossible','Des données liées empêchent cette opération.'),
             412:('Données modifiées','Rechargez la ressource et vérifiez les changements avant de réessayer.'),
             422:('Données invalides','Vérifiez les champs ou les filtres utilisés.'),

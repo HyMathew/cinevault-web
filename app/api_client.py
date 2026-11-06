@@ -181,3 +181,13 @@ class APIClient:
             raise ValueError('Unsupported loan action')
         return self.request('POST','/api/v1/loans/'+quote(loan_id,safe='')+'/'+action,
                             headers={'Authorization':'Bearer '+token,'If-Match':version},json=data)
+
+    def reservations(self,token,**query):
+        return self.account_request(token,'GET','/reservations',params={k:v for k,v in query.items() if v!=''})
+
+    def request_reservation(self,token,data):
+        return self.account_request(token,'POST','/reservations',json=data)
+
+    def cancel_reservation(self,token,reservation_id,version):
+        return self.request('POST','/api/v1/reservations/'+quote(reservation_id,safe='')+'/cancel',
+                            headers={'Authorization':'Bearer '+token,'If-Match':version})

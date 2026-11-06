@@ -48,7 +48,10 @@ def detail(film_id):
     film = api().get(film_id)
     if film is None:
         abort(404)
-    return render_template('enterprise_detail.html' if enterprise() else 'detail.html', film=film)
+    own_reservations={'reservations':[],'positions':{},'ready_ids':[],'open_loan_ids':{}}
+    if enterprise() and g.user:
+        own_reservations=api().reservations(auth_token(),status='waiting',scope='mine',movie_id=film_id)
+    return render_template('enterprise_detail.html' if enterprise() else 'detail.html',film=film,own_reservations=own_reservations)
 
 
 @pages.route('/films/nouveau', methods=['GET', 'POST'])

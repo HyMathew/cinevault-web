@@ -167,7 +167,7 @@ def install_accounts(app):
 
     @app.after_request
     def account_headers(response):
-        if request.endpoint and request.endpoint.startswith('accounts.'):
+        if (request.endpoint and request.endpoint.startswith('accounts.')) or g.get('user') or token():
             response.headers['Cache-Control'] = 'no-store'
         if g.get('clear_auth_cookie'):
             clear_auth(response)

@@ -8,6 +8,7 @@ from .api_client import APIError
 
 bp=Blueprint('lending',__name__)
 STATUSES={'pending':'En attente','active':'En prêt','returned':'Retourné','cancelled':'Annulé'}
+RESERVATION_STATUSES={'waiting':'En attente','fulfilled':'Attribuée','cancelled':'Annulée','expired':'Expirée'}
 
 
 def api():
@@ -21,7 +22,7 @@ def require_manager():
 
 @bp.app_context_processor
 def labels():
-    return {'loan_statuses':STATUSES}
+    return {'loan_statuses':STATUSES,'reservation_statuses':RESERVATION_STATUSES}
 
 
 @bp.app_template_filter('utc_date')
@@ -106,3 +107,31 @@ def cancel(loan_id):
     api().loan_action(token(),loan_id,'cancel',request.form.get('version',''))
     flash('La demande a été annulée.')
     return redirect(url_for('lending.loan_list'),code=303)
+
+
+@bp.get('/reservations')
+@signed_in
+def reservation_list():
+    query=request.args.to_dict()
+    return render_template('reservation_list.html',result=api().reservations(token(),**query),query=query)
+
+
+@bp.post('/films/<film_id>/reserver')
+@signed_in
+def request_reservation(film_id):
+    try:
+        api().request_reservation(token(),{'movie_id':film_id})
+    except APIError as exc:
+        if exc.status!=409:
+            raise
+        return render_template('reservation_conflict.html',film_id=film_id),409
+    flash('Votre réservation a été enregistrée dans la file d’attente.')
+    return redirect(url_for('lending.reservation_list'),code=303)
+
+
+@bp.post('/reservations/<reservation_id>/annuler')
+@signed_in
+def cancel_reservation(reservation_id):
+    api().cancel_reservation(token(),reservation_id,request.form.get('version',''))
+    flash('La réservation a été annulée.')
+    return redirect(url_for('lending.reservation_list'),code=303)

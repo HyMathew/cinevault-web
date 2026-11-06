@@ -201,3 +201,9 @@ class APIClient:
 
     def export_catalogue(self,token,format):
         return self.account_request(token,'GET','/catalogue/export',params={'format':format})
+
+    def statistics(self,token,scope='mine'):
+        return self.account_request(token,'GET','/statistics',params={'scope':scope})
+
+    def recommendations(self,token,genres=()):
+        return self.account_request(token,'GET','/recommendations',params=[('genre',genre) for genre in genres])

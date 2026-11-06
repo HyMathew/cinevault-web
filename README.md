@@ -2,7 +2,7 @@
 
 Service de présentation Flask/Jinja de CineVault. Il appelle une API HTTP séparée et n'écrit jamais le fichier JSON. Le mode pédagogique legacy est actif par défaut ; `ENTERPRISE_ENABLED=true` active comptes, catalogue partagé, exemplaires, collections privées, prêts et réservations, lorsque le backend est configuré au même mode. TLS et les autres extensions restent à compléter avant la livraison finale.
 
-Documentation : [comptes et transmission de l'identité](docs/accounts.md), [collections privées](docs/collections.md), [prêts et retours](docs/loans.md), [réservations](docs/reservations.md), [import/export](docs/transfer.md). L'API demeure l'autorité pour les permissions et les règles métier ; le frontend ne transmet aucun rôle ou propriétaire comme preuve d'identité.
+Documentation : [comptes et transmission de l'identité](docs/accounts.md), [collections privées](docs/collections.md), [prêts et retours](docs/loans.md), [réservations](docs/reservations.md), [import/export](docs/transfer.md), [tableau de bord et découverte](docs/insights.md). L'API demeure l'autorité pour les permissions et les règles métier ; le frontend ne transmet aucun rôle ou propriétaire comme preuve d'identité.
 
 ## Configuration
 

@@ -53,6 +53,8 @@ def create_app(config=None):
         app.register_blueprint(lending_bp)
         from .transfer import bp as transfer_bp
         app.register_blueprint(transfer_bp)
+        from .insights import bp as insights_bp
+        app.register_blueprint(insights_bp)
 
     @app.after_request
     def security_headers(response):

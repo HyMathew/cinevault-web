@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Créer un compte' if registering else 'Connexion' }} · CineVault{% endblock %}
+{% block content %}
+<section class="form-page"><p class="eyebrow">VOTRE ESPACE CINEVAULT</p>
+<h1>{{ 'Votre cinéma, ensemble.' if registering else 'Heureux de vous retrouver.' }}</h1>
+<p>{{ 'Créez votre compte pour rejoindre la vidéothèque.' if registering else 'Connectez-vous pour retrouver votre espace personnel.' }}</p>
+{% if message %}<div class="alert" role="alert">{{ message }}</div>{% endif %}
+<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<div class="field"><label for="username">Identifiant</label><input id="username" name="username" value="{{ username }}" autocomplete="username" required minlength="3" maxlength="32" pattern="[a-z0-9][a-z0-9._-]{2,31}" aria-describedby="username-hint"><p class="hint" id="username-hint">3 à 32 caractères : minuscules, chiffres, point, tiret ou soulignement.</p></div>
+{% if registering %}<div class="field"><label for="display_name">Nom affiché</label><input id="display_name" name="display_name" value="{{ display_name }}" autocomplete="nickname" required maxlength="120"></div>{% endif %}
+<div class="field"><label for="password">Mot de passe</label><input id="password" name="password" type="password" autocomplete="{{ 'new-password' if registering else 'current-password' }}" required {% if registering %}minlength="12" aria-describedby="password-hint"{% endif %} maxlength="256">{% if registering %}<p id="password-hint" class="hint">12 à 256 caractères. Une phrase longue est acceptée.</p>{% endif %}</div>
+{% if registering %}<div class="field"><label for="password_confirmation">Confirmer le mot de passe</label><input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required minlength="12" maxlength="256"></div>{% endif %}
+<button type="submit" class="button primary">{{ 'Créer mon compte' if registering else 'Me connecter' }}</button>
+</form><p class="account-switch"><a href="{{ url_for('accounts.login') if registering else url_for('accounts.register') }}">{{ 'Déjà un compte ? Se connecter' if registering else 'Créer un compte' }}</a></p></section>
+{% endblock %}

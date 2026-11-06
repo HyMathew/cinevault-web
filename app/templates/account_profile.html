@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Mon profil · CineVault{% endblock %}
+{% block content %}<section class="form-page"><p class="eyebrow">MON ESPACE</p><h1>{{ g.user.display_name }}</h1>
+<p>Identifiant : {{ g.user.username }} · Rôle : {{ {'member':'Membre','manager':'Gestionnaire','admin':'Administrateur'}[g.user.role] }}</p>
+{% if message %}<div class="alert" role="alert">{{ message }}</div>{% endif %}
+<h2>Vos informations</h2><form method="post" action="{{ url_for('accounts.profile') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="field"><label for="display_name">Nom affiché</label><input id="display_name" name="display_name" value="{{ g.user.display_name }}" required maxlength="120" autocomplete="nickname"></div><button class="button primary">Enregistrer mon profil</button></form>
+<section class="section"><h2>Changer de mot de passe</h2><p>Toutes vos sessions seront fermées après ce changement.</p><form method="post" action="{{ url_for('accounts.password') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<div class="field"><label for="current_password">Mot de passe actuel</label><input type="password" name="current_password" id="current_password" autocomplete="current-password" required maxlength="256"></div>
+<div class="field"><label for="new_password">Nouveau mot de passe</label><input type="password" name="new_password" id="new_password" autocomplete="new-password" required minlength="12" maxlength="256" aria-describedby="new-password-hint"><p class="hint" id="new-password-hint">12 à 256 caractères.</p></div>
+<div class="field"><label for="password_confirmation">Confirmer le nouveau mot de passe</label><input type="password" name="password_confirmation" id="password_confirmation" autocomplete="new-password" required minlength="12" maxlength="256"></div><button class="button secondary">Changer mon mot de passe</button></form></section></section>{% endblock %}

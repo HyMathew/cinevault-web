@@ -12,8 +12,9 @@ class APIError(Exception):
 
 
 class APIClient:
-    def __init__(self, base_url):
+    def __init__(self, base_url, enterprise=False):
         self.base_url = base_url.rstrip('/')
+        self.enterprise = enterprise
 
     def request(self, method, path, **kwargs):
         try:
@@ -38,6 +39,8 @@ class APIClient:
             raise APIError(503, "Réponse invalide du service de données.") from exc
 
     def list(self, q='', support=''):
+        if self.enterprise:
+            return self.search(q=q, support=support)['films']
         result = self.request('GET', '/api/films', params={'q': q, 'support': support})
         try:
             return result['films']
@@ -46,20 +49,71 @@ class APIClient:
 
     def get(self, film_id):
         try:
+            if self.enterprise:
+                movie = self.request('GET', '/api/v1/movies/' + quote(film_id, safe=''))
+                copies = self.copies(film_id)
+                return self.movie_view(movie, copies=copies)
             return self.request('GET', '/api/films/' + quote(film_id, safe=''))
         except APIError as exc:
             if exc.status == 404:
                 return None
             raise
 
-    def create(self, data):
+    def create(self, data, token=''):
+        if self.enterprise:
+            body = self.movie_payload(data)
+            body['initial_copy'] = {'support':data['support'],'location':'','condition':'unknown'}
+            movie = self.account_request(token,'POST','/movies',json=body)
+            return self.movie_view(movie)
         return self.request('POST', '/api/films', json=data)
 
-    def update(self, film_id, data):
+    def update(self, film_id, data, token='', version=''):
+        if self.enterprise:
+            movie = self.request('PUT','/api/v1/movies/'+quote(film_id,safe=''),
+                                 headers={'Authorization':'Bearer '+token,'If-Match':version},json=self.movie_payload(data))
+            return self.movie_view(movie)
         return self.request('PUT', '/api/films/' + quote(film_id, safe=''), json=data)
 
-    def delete(self, film_id):
+    def delete(self, film_id, token='', version=''):
+        if self.enterprise:
+            return self.request('DELETE','/api/v1/movies/'+quote(film_id,safe=''),
+                                headers={'Authorization':'Bearer '+token,'If-Match':version})
         return self.request('DELETE', '/api/films/' + quote(film_id, safe=''))
+
+    @staticmethod
+    def movie_view(movie, copies=None, summary=None):
+        summary = summary or {'count':len(copies or []),'supports':list(dict.fromkeys(c['support'] for c in copies or []))}
+        return {'id':movie['id'],'titre':movie['title'],'annee':movie['year'],'realisateur':movie['director'],
+                'acteurs':movie['actors'],'synopsis':movie['synopsis'],'genres':movie['genres'],'_etag':movie['_etag'],
+                'support':summary['supports'][0] if summary['supports'] else 'autre',
+                'copy_count':summary['count'],'copy_supports':summary['supports'],'copies':copies or []}
+
+    @staticmethod
+    def movie_payload(data):
+        return {'title':data['titre'],'year':data['annee'],'director':data['realisateur'],
+                'actors':data['acteurs'],'synopsis':data['synopsis'],'genres':data.get('genres',[])}
+
+    def search(self, **query):
+        result = self.request('GET','/api/v1/movies',params={k:v for k,v in query.items() if v != ''})
+        return {'films':[self.movie_view(m,summary=result['copy_summaries'][m['id']]) for m in result['movies']],
+                'total':result['total'],'limit':result['limit'],'offset':result['offset']}
+
+    def copies(self, movie_id):
+        return self.request('GET','/api/v1/copies',params={'movie_id':movie_id})['copies']
+
+    def copy(self, copy_id):
+        return self.request('GET','/api/v1/copies/'+quote(copy_id,safe=''))
+
+    def create_copy(self, token, data):
+        return self.account_request(token,'POST','/copies',json=data)
+
+    def update_copy(self, token, copy_id, data, version):
+        return self.request('PUT','/api/v1/copies/'+quote(copy_id,safe=''),
+                            headers={'Authorization':'Bearer '+token,'If-Match':version},json=data)
+
+    def delete_copy(self, token, copy_id, version):
+        return self.request('DELETE','/api/v1/copies/'+quote(copy_id,safe=''),
+                            headers={'Authorization':'Bearer '+token,'If-Match':version})
 
     def register(self, data):
         return self.request('POST', '/api/v1/auth/register', json=data)

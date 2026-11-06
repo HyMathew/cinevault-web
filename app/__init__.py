@@ -22,13 +22,15 @@ def create_app(config=None):
             raise RuntimeError('Le fichier de clé de session doit contenir au moins 32 octets.')
     if not app.config['SECRET_KEY']:
         raise RuntimeError('SECRET_KEY doit être défini avant le démarrage.')
-    app.extensions['cinevault_api'] = app.config.get('API_CLIENT') or APIClient(app.config['API_URL'])
+    app.extensions['cinevault_api'] = app.config.get('API_CLIENT') or APIClient(app.config['API_URL'], enterprise=app.config['ENTERPRISE_ENABLED'] is True)
 
     @app.context_processor
     def context():
         if 'csrf_token' not in session:
             session['csrf_token'] = secrets.token_urlsafe(32)
-        return {'csrf_token': session['csrf_token'], 'supports': SUPPORTS}
+        from flask import g
+        manager = not app.config['ENTERPRISE_ENABLED'] or bool(g.get('user') and g.user['role'] in ('manager','admin'))
+        return {'csrf_token': session['csrf_token'], 'supports': SUPPORTS, 'can_manage':manager}
 
     @app.before_request
     def verify_csrf():
@@ -55,8 +57,19 @@ def create_app(config=None):
     def api_error(error):
         from flask import render_template
         app.logger.warning('Erreur du service de données : statut %s', error.status)
-        status = 404 if error.status == 404 else 503
-        return render_template('error.html', title='Film introuvable' if status == 404 else 'Service indisponible', message='Le film demandé est introuvable.' if status == 404 else 'Le service de données est indisponible. Réessayez plus tard.'), status
+        status = error.status if error.status in (401,403,404,409,412,422,428,429) else 503
+        title, message = {
+            401:('Connexion requise','Votre session a expiré. Connectez-vous à nouveau.'),
+            403:('Accès interdit','Votre rôle ne permet pas cette action.'),
+            404:('Film introuvable','La ressource demandée est introuvable.'),
+            409:('Opération impossible','Des données liées empêchent cette opération.'),
+            412:('Données modifiées','Rechargez la ressource et vérifiez les changements avant de réessayer.'),
+            422:('Données invalides','Vérifiez les champs ou les filtres utilisés.'),
+            428:('Version requise','Rechargez le formulaire avant de réessayer.'),
+            429:('Trop de tentatives','Réessayez dans quelques minutes.'),
+            503:('Service indisponible','Le service de données est indisponible. Réessayez plus tard.'),
+        }[status]
+        return render_template('error.html', title=title, message=message), status
 
     @app.errorhandler(404)
     def not_found(error):

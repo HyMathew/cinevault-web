@@ -106,8 +106,11 @@ class APIClient:
     def copy(self, copy_id):
         return self.request('GET','/api/v1/copies/'+quote(copy_id,safe=''))
 
-    def create_copy(self, token, data):
-        return self.account_request(token,'POST','/copies',json=data)
+    def create_copy(self, token, data, operation_key=None):
+        headers={'Authorization':'Bearer '+token}
+        if operation_key is not None:
+            headers['Idempotency-Key']=operation_key
+        return self.request('POST','/api/v1/copies',headers=headers,json=data)
 
     def update_copy(self, token, copy_id, data, version):
         return self.request('PUT','/api/v1/copies/'+quote(copy_id,safe=''),

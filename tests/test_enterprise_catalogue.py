@@ -59,9 +59,9 @@ def test_copy_management_forms_and_movie_binding(accounts):
     api.me.return_value = {**PROFILE,'role':'manager'}
     client.set_cookie('cinevault_auth',TOKEN)
     token = csrf(client.get('/films/film-id/exemplaires/nouveau'))
-    body = {'csrf_token':token,'support':'dvd','location':'Rayon B','condition':'good'}
+    body = {'csrf_token':token,'support':'dvd','location':'Rayon B','condition':'good','operation_key':'synthetic-copy-operation-123456'}
     assert client.post('/films/film-id/exemplaires/nouveau',data=body).status_code == 303
-    api.create_copy.assert_called_once_with(TOKEN,{'movie_id':'film-id','support':'dvd','location':'Rayon B','condition':'good'})
+    api.create_copy.assert_called_once_with(TOKEN,{'movie_id':'film-id','support':'dvd','location':'Rayon B','condition':'good'},operation_key=body['operation_key'])
     page = client.get('/films/film-id/exemplaires/copy-id/modifier')
     assert page.status_code == 200
     assert client.post('/films/film-id/exemplaires/copy-id/modifier',data={**body,'version':'"copy-version"'}).status_code == 303
@@ -90,3 +90,18 @@ def test_enterprise_client_sends_version_and_canonical_metadata(monkeypatch):
     assert calls[0][0:2] == ('PUT','http://api/api/v1/movies/film-id')
     assert calls[0][2]['headers'] == {'Authorization':'Bearer '+TOKEN,'If-Match':'"old"'}
     assert 'support' not in calls[0][2]['json']
+
+
+def test_copy_timeout_preserves_operation_key_without_automatic_retry(accounts):
+    client,api=accounts
+    setup_catalogue(api)
+    api.me.return_value={**PROFILE,'role':'manager'}
+    client.set_cookie('cinevault_auth',TOKEN)
+    page=client.get('/films/film-id/exemplaires/nouveau')
+    import re
+    key=re.search(rb'name="operation_key" value="([^"]+)"',page.data).group(1).decode()
+    api.create_copy.side_effect=APIError(503,'uncertain')
+    response=client.post('/films/film-id/exemplaires/nouveau',data={'csrf_token':csrf(page),
+        'operation_key':key,'support':'dvd','location':'Saved value','condition':'good'})
+    assert response.status_code==503 and key.encode() in response.data and b'Saved value' in response.data
+    assert api.create_copy.call_count==1

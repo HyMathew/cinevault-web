@@ -1,3 +1,4 @@
+import secrets
 from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, url_for
 
 from .api_client import APIError
@@ -129,21 +130,27 @@ def copy_form(film_id,copy_id=None):
     if film is None:
         abort(404)
     values = api().copy(copy_id) if copy_id else {'support':'','location':'','condition':'unknown'}
+    if not copy_id:
+        values['operation_key']=secrets.token_urlsafe(32)
     if copy_id and values['movie_id'] != film_id:
         abort(404)
     message = None
     if request.method == 'POST':
         values = request.form.to_dict()
+        if not copy_id and not values.get('operation_key'):
+            abort(400,description='Rouvrez le formulaire avant de créer un exemplaire.')
         data = {k:request.form.get(k,'') for k in ('support','location','condition')}
         try:
             if copy_id:
                 api().update_copy(auth_token(),copy_id,data,request.form.get('version',''))
             else:
-                api().create_copy(auth_token(),{'movie_id':film_id,**data})
+                api().create_copy(auth_token(),{'movie_id':film_id,**data},operation_key=values['operation_key'])
         except APIError as exc:
-            if exc.status not in (422,412,428):
+            if exc.status not in (422,409,412,428,503):
                 raise
-            message = 'Vérifiez les champs.' if exc.status == 422 else 'Cet exemplaire a changé. Rechargez-le avant de réessayer.'
+            message = {422:'Vérifiez les champs.',409:'Ce formulaire a déjà servi avec d’autres valeurs. Vérifiez la fiche puis ouvrez un nouveau formulaire.',
+                412:'Cet exemplaire a changé. Rechargez-le avant de réessayer.',428:'Rechargez cet exemplaire avant de réessayer.',
+                503:'Le résultat n’a pas pu être confirmé. Vos champs sont conservés ; vérifiez la fiche avant de réessayer.'}[exc.status]
             return render_template('enterprise_copy_form.html',film=film,values=values,editing=bool(copy_id),message=message),exc.status
         return redirect(url_for('pages.detail',film_id=film_id),code=303)
     return render_template('enterprise_copy_form.html',film=film,values=values,editing=bool(copy_id),message=message)

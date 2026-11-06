@@ -52,7 +52,9 @@ class APIClient:
             if self.enterprise:
                 movie = self.request('GET', '/api/v1/movies/' + quote(film_id, safe=''))
                 copies = self.copies(film_id)
-                return self.movie_view(movie, copies=copies)
+                view=self.movie_view(movie,copies=copies)
+                view['availability']=self.request('GET','/api/v1/availability',params={'movie_id':film_id})
+                return view
             return self.request('GET', '/api/films/' + quote(film_id, safe=''))
         except APIError as exc:
             if exc.status == 404:
@@ -161,3 +163,21 @@ class APIClient:
     def delete_entry(self, token, entry_id, version):
         return self.request('DELETE','/api/v1/collections/'+quote(entry_id,safe=''),
                             headers={'Authorization':'Bearer '+token,'If-Match':version})
+
+    def request_loan(self,token,data):
+        return self.account_request(token,'POST','/loans',json=data)
+
+    def loans(self,token,**query):
+        return self.account_request(token,'GET','/loans',params={k:v for k,v in query.items() if v!=''})
+
+    def loan(self,token,loan_id):
+        return self.account_request(token,'GET','/loans/'+quote(loan_id,safe=''))
+
+    def loan_options(self,token,loan_id):
+        return self.account_request(token,'GET','/loans/'+quote(loan_id,safe='')+'/options')
+
+    def loan_action(self,token,loan_id,action,version,data=None):
+        if action not in ('approve','return','cancel'):
+            raise ValueError('Unsupported loan action')
+        return self.request('POST','/api/v1/loans/'+quote(loan_id,safe='')+'/'+action,
+                            headers={'Authorization':'Bearer '+token,'If-Match':version},json=data)

@@ -47,6 +47,8 @@ def create_app(config=None):
         install_accounts(app)
         from .personal import bp as personal_bp
         app.register_blueprint(personal_bp)
+        from .lending import bp as lending_bp
+        app.register_blueprint(lending_bp)
 
     @app.after_request
     def security_headers(response):
@@ -69,7 +71,7 @@ def create_app(config=None):
             422:('Données invalides','Vérifiez les champs ou les filtres utilisés.'),
             428:('Version requise','Rechargez le formulaire avant de réessayer.'),
             429:('Trop de tentatives','Réessayez dans quelques minutes.'),
-            503:('Service indisponible','Le service de données est indisponible. Réessayez plus tard.'),
+            503:('Service indisponible','Le service de données est indisponible. Avant de répéter une modification, vérifiez son résultat lorsque le service revient.'),
         }[status]
         return render_template('error.html', title=title, message=message), status
 

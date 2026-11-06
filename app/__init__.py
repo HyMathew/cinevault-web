@@ -45,6 +45,8 @@ def create_app(config=None):
     if app.config['ENTERPRISE_ENABLED'] is True:
         from .accounts import install_accounts
         install_accounts(app)
+        from .personal import bp as personal_bp
+        app.register_blueprint(personal_bp)
 
     @app.after_request
     def security_headers(response):

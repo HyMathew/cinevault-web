@@ -3,3 +3,5 @@
 .nav-links{flex-wrap:wrap;gap:24px}.nav-button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}.nav-button:hover{color:var(--accent)}.account-switch{margin-top:28px}.account-card{padding:28px 0;border-top:1px solid var(--line);max-width:760px}.account-card h2{font-size:1.8rem;overflow-wrap:anywhere}.account-card form{max-width:480px}.form-page h1{overflow-wrap:anywhere}
 
 .enterprise-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.enterprise-filters .reset{margin-top:0}.detail h1,.recent strong{overflow-wrap:anywhere}@media(max-width:700px){.enterprise-filters{grid-template-columns:1fr}}
+
+.checkbox-row{display:flex;align-items:center;gap:12px;font-weight:normal}.checkbox-row input{width:auto;min-height:24px;min-width:24px}.field legend{font-weight:bold}.account-card{overflow-wrap:anywhere}

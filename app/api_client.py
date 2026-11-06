@@ -144,3 +144,20 @@ class APIClient:
 
     def update_user(self, token, user_id, data):
         return self.account_request(token, 'PATCH', '/users/' + quote(user_id, safe=''), json=data)
+
+    def collections(self, token, **query):
+        return self.account_request(token,'GET','/collections',params={k:v for k,v in query.items() if v != ''})
+
+    def collection_entry(self, token, entry_id):
+        return self.account_request(token,'GET','/collections/'+quote(entry_id,safe=''))
+
+    def create_entry(self, token, data):
+        return self.account_request(token,'POST','/collections',json=data)
+
+    def update_entry(self, token, entry_id, data, version):
+        return self.request('PUT','/api/v1/collections/'+quote(entry_id,safe=''),
+                            headers={'Authorization':'Bearer '+token,'If-Match':version},json=data)
+
+    def delete_entry(self, token, entry_id, version):
+        return self.request('DELETE','/api/v1/collections/'+quote(entry_id,safe=''),
+                            headers={'Authorization':'Bearer '+token,'If-Match':version})

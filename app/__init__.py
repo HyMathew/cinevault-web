@@ -34,6 +34,8 @@ def create_app(config=None):
 
     @app.before_request
     def verify_csrf():
+        if request.endpoint=='transfer.catalogue':
+            request.max_content_length=2*1024*1024
         if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
             expected = session.get('csrf_token', '')
             received = request.form.get('csrf_token', '')
@@ -49,6 +51,8 @@ def create_app(config=None):
         app.register_blueprint(personal_bp)
         from .lending import bp as lending_bp
         app.register_blueprint(lending_bp)
+        from .transfer import bp as transfer_bp
+        app.register_blueprint(transfer_bp)
 
     @app.after_request
     def security_headers(response):

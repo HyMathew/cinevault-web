@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Transférer le catalogue · CineVault{% endblock %}
+{% block content %}
+<section class="intro"><p class="eyebrow">Gestion du catalogue</p><h1>Importer et exporter</h1><p class="muted">Films et exemplaires partagés uniquement. Les comptes, collections privées et historiques de prêt restent confidentiels.</p></section>
+{% if message %}<p class="notice" role="alert">{{ message }}</p>{% endif %}
+{% if result %}<section class="account-card" role="status"><h2>Import terminé</h2><p>{{ result.created_movies }} film(s) et {{ result.created_copies }} exemplaire(s) créés. {{ result.skipped_movies }} film(s) et {{ result.skipped_copies }} exemplaire(s) ignorés.</p><p class="muted">Référence : {{ result.operation_id }}</p><a href="{{ url_for('pages.catalogue') }}">Consulter le catalogue</a></section>{% endif %}
+<section class="account-card"><h2>Exporter</h2><p>JSON conserve le texte exact. Le CSV est destiné au tableur : les cellules susceptibles de devenir des formules reçoivent une apostrophe protectrice.</p><div class="actions"><a class="button primary" href="{{ url_for('transfer.download',format='json') }}">Télécharger JSON</a><a class="button secondary" href="{{ url_for('transfer.download',format='csv') }}">Télécharger CSV</a></div></section>
+<section class="account-card"><h2>Importer un fichier</h2><p id="file-help">UTF-8, 1 Mio maximum, 1 000 films et 5 000 exemplaires. Le lot entier est validé avant ajout. Une erreur annule tous les ajouts.</p>
+<form method="post" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="operation_key" value="{{ operation_key }}">
+<div class="field"><label for="transfer-format">Format</label><select id="transfer-format" name="format"><option value="json" {% if format=='json' %}selected{% endif %}>JSON version 1</option><option value="csv" {% if format=='csv' %}selected{% endif %}>CSV, séparateur virgule</option></select></div>
+<div class="field"><label for="duplicate-policy">Si un film existe déjà</label><select id="duplicate-policy" name="duplicate_policy" aria-describedby="policy-help"><option value="reject" {% if policy=='reject' %}selected{% endif %}>Refuser tout le lot</option><option value="skip" {% if policy=='skip' %}selected{% endif %}>Ignorer ce film et ses exemplaires</option><option value="append_copies" {% if policy=='append_copies' %}selected{% endif %}>Ajouter seulement les nouveaux exemplaires</option></select></div>
+<p class="muted" id="policy-help">L’ajout d’exemplaires exige des métadonnées identiques. Aucun film existant n’est modifié.</p>
+<div class="field"><label for="catalogue-file">Fichier du catalogue</label><input id="catalogue-file" type="file" name="file" accept=".json,.csv,application/json,text/csv" aria-describedby="file-help" required></div>
+<button class="button primary" type="submit">Valider et importer</button></form>
+<details><summary>Structure du CSV</summary><p>En-tête exact : <code>movie_id,copy_id,title,year,director,actors,genres,synopsis,support,location,condition</code>. Une ligne par exemplaire ; les quatre champs d’exemplaire vides indiquent un film sans exemplaire. Acteurs et genres sont des tableaux JSON, par exemple <code>["Drame"]</code>. Les identifiants sont facultatifs à l’import. Un export JSON ou CSV fournit un modèle réutilisable.</p></details></section>
+{% endblock %}

@@ -194,3 +194,10 @@ class APIClient:
     def cancel_reservation(self,token,reservation_id,version):
         return self.request('POST','/api/v1/reservations/'+quote(reservation_id,safe='')+'/cancel',
                             headers={'Authorization':'Bearer '+token,'If-Match':version})
+
+    def import_catalogue(self,token,data,operation_key):
+        return self.request('POST','/api/v1/catalogue/import',json=data,
+                            headers={'Authorization':'Bearer '+token,'Idempotency-Key':operation_key})
+
+    def export_catalogue(self,token,format):
+        return self.account_request(token,'GET','/catalogue/export',params={'format':format})

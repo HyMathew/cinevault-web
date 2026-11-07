@@ -29,3 +29,9 @@ Le concept visuel `concept.png` est une maquette générée ; ses données ficti
 - C : `GET /films/<id>`, client `app/api_client.py`, template `detail.html`. Les données viennent du fichier JSON **via l'API** ; le serveur web n'accède pas au fichier.
 
 `tests/test_exercices_pedagogiques.py` teste séparément les trois rendus avec un client API simulé pour B et C. La preuve interservices avec fichier réel est distincte des tests simulés et doit être exécutée avec les deux services ; voir l'index des preuves dans le dossier de travail du projet. Les données des tests sont fictives.
+
+## Qualité et CI
+
+Voir les [commandes, contrôles et limites](docs/quality.md). Les configurations de CI ne constituent pas une preuve d’exécution distante ; aucun badge de succès n’est ajouté avant un résultat GitHub réel.
+
+Le [socle d’exécution spécialisé et ses limites de reconstruction](docs/runtime.md) décrit les deux étapes de construction et les composants conservés.

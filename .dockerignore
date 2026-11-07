@@ -5,3 +5,7 @@ __pycache__
 tests
 concept.png
 .env
+
+.venv-quality/
+.ruff_cache/
+reports/

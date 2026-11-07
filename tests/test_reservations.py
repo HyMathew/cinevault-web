@@ -1,5 +1,6 @@
 from test_accounts import accounts,csrf,TOKEN,PROFILE
 from app.api_client import APIError
+import pytest
 
 RESERVATION={'id':'reservation-id','movie_id':'film-id','user_id':'user-id','status':'waiting',
     'sequence':3,'created_at':1700000000,'expires_at':1701209600,'closed_at':None,'loan_id':None,'_etag':'"reservation-version"'}
@@ -67,4 +68,21 @@ def test_film_detail_uses_own_queue_context_without_cache(accounts):
     assert page.status_code==200 and page.headers['Cache-Control']=='no-store'
     api.reservations.assert_called_once_with(TOKEN,status='waiting',scope='mine',movie_id='film-id')
     assert 'Un exemplaire est disponible pour vous.'.encode() in page.data
+    assert 'Réserver ce film'.encode() not in page.data
+
+
+@pytest.mark.parametrize('role',['member','manager','admin'])
+@pytest.mark.parametrize('status,label',[('pending','Voir ma demande de prêt'),('active','Voir mon prêt en cours')])
+def test_film_detail_links_existing_own_loan_even_without_reservation(accounts,role,status,label):
+    from test_enterprise_catalogue import FILM
+    client,api=accounts
+    client.set_cookie('cinevault_auth',TOKEN)
+    api.me.return_value={**PROFILE,'role':role}
+    api.get.return_value={**FILM,'availability':{'available':0 if status=='active' else 2}}
+    api.loans.return_value={'loans':[{'id':'own-loan','status':status}],'total':1}
+    page=client.get('/films/film-id')
+    assert page.status_code==200 and page.headers['Cache-Control']=='no-store'
+    api.loans.assert_called_once_with(TOKEN,scope='mine',movie_id='film-id',status='open',limit=1)
+    assert label.encode() in page.data
+    assert 'Demander un prêt'.encode() not in page.data
     assert 'Réserver ce film'.encode() not in page.data

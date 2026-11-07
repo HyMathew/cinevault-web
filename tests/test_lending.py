@@ -34,6 +34,19 @@ def response_private(response):
     return response.headers.get('Cache-Control')=='no-store' and TOKEN.encode() not in response.data
 
 
+def test_open_loan_followup_preserves_movie_and_own_scope_when_filtering(accounts):
+    client,api=accounts
+    fixture(api)
+    api.me.return_value={**PROFILE,'role':'manager'}
+    client.set_cookie('cinevault_auth',TOKEN)
+    page=client.get('/emprunts?scope=mine&movie_id=film-id&status=open')
+    assert page.status_code==200 and response_private(page)
+    assert b'name="scope" value="mine"' in page.data
+    assert b'name="movie_id" value="film-id"' in page.data
+    assert b'<option value="open" selected>' in page.data
+    assert b'Vos emprunts.' in page.data
+
+
 def test_manager_approval_parses_date_and_relays_copy_and_version(accounts):
     client,api=accounts
     fixture(api)

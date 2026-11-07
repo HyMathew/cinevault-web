@@ -18,6 +18,7 @@ def accounts():
     api.login.return_value = {'token':TOKEN,'token_type':'Bearer','expires_in':28800}
     api.update_profile.return_value = {**PROFILE, 'display_name':'Updated Alice'}
     api.reservations.return_value={'reservations':[],'positions':{},'ready_ids':[],'open_loan_ids':{},'total':0,'limit':24,'offset':0,'movies':{},'users':{}}
+    api.loans.return_value={'loans':[],'total':0,'limit':24,'offset':0,'movies':{},'borrowers':{},'overdue_ids':[]}
     app = create_app({'TESTING':True,'SECRET_KEY':'only-for-unit-tests','ENTERPRISE_ENABLED':True,
                       'API_CLIENT':api, 'SESSION_COOKIE_SECURE':True})
     return app.test_client(), api

@@ -1,8 +1,14 @@
 """Client HTTP du service de données ; aucune mutation n'est rejouée."""
 
+import hashlib
+import hmac
+import ipaddress
+import json
+import time
 from urllib.parse import quote, urlsplit
 
 import requests
+from flask import has_request_context, request
 
 
 def safe_poster(value):
@@ -35,16 +41,24 @@ def safe_poster(value):
 
 
 class APIError(Exception):
-    def __init__(self, status, message, fields=None):
+    def __init__(self, status, message, fields=None, retry_after=None):
         super().__init__(message)
         self.status = status
         self.fields = fields or {}
+        self.retry_after = (
+            retry_after if type(retry_after) is int and 1 <= retry_after <= 3600 else None
+        )
 
 
 class APIClient:
-    def __init__(self, base_url, enterprise=False):
+    def __init__(self, base_url, enterprise=False, client_context_key=None):
         self.base_url = base_url.rstrip("/")
         self.enterprise = enterprise
+        if client_context_key is not None and (
+            not isinstance(client_context_key, bytes) or len(client_context_key) < 32
+        ):
+            raise RuntimeError("La clé de contexte client doit contenir au moins 32 octets.")
+        self.client_context_key = client_context_key
 
     def request(self, method, path, **kwargs):
         timeout = kwargs.pop("timeout", (2, 5))
@@ -63,10 +77,19 @@ class APIClient:
                 error = {}
             if not isinstance(error, dict):
                 error = {}
+            try:
+                retry_after = (
+                    int(getattr(response, "headers", {}).get("Retry-After", ""))
+                    if response.status_code in (429, 503)
+                    else None
+                )
+            except (ValueError, TypeError):
+                retry_after = None
             raise APIError(
                 response.status_code,
                 error.get("message", "Une erreur est survenue."),
                 error.get("fields"),
+                retry_after=retry_after,
             )
         if response.status_code == 204:
             return None
@@ -251,11 +274,53 @@ class APIClient:
             headers={"Authorization": "Bearer " + token, "If-Match": version},
         )
 
+    def anonymous_auth(self, path, data):
+        if self.client_context_key is None:
+            return self.request("POST", path, json=data)
+        if not has_request_context():
+            raise APIError(503, "Contexte de connexion indisponible.")
+        try:
+            observed = request.remote_addr
+            if not observed or "%" in observed:
+                raise ValueError()
+            address = str(ipaddress.ip_address(observed))
+        except ValueError:
+            raise APIError(503, "Contexte de connexion indisponible.") from None
+        try:
+            encoded = json.dumps(data, ensure_ascii=False, allow_nan=False).encode("utf-8")
+        except (ValueError, TypeError, UnicodeError):
+            raise APIError(422, "Données de connexion invalides.") from None
+        timestamp = str(int(time.time()))
+        message = "\n".join(
+            (
+                "cinevault-client-v1",
+                timestamp,
+                address,
+                "POST",
+                path,
+                hashlib.sha256(encoded).hexdigest(),
+            )
+        )
+        signature = hmac.new(
+            self.client_context_key, message.encode("ascii"), hashlib.sha256
+        ).hexdigest()
+        return self.request(
+            "POST",
+            path,
+            data=encoded,
+            headers={
+                "Content-Type": "application/json",
+                "X-CineVault-Client-IP": address,
+                "X-CineVault-Client-Time": timestamp,
+                "X-CineVault-Client-Signature": signature,
+            },
+        )
+
     def register(self, data):
-        return self.request("POST", "/api/v1/auth/register", json=data)
+        return self.anonymous_auth("/api/v1/auth/register", data)
 
     def login(self, data):
-        return self.request("POST", "/api/v1/auth/login", json=data)
+        return self.anonymous_auth("/api/v1/auth/login", data)
 
     def account_request(self, token, method, path, **kwargs):
         return self.request(

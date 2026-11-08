@@ -31,8 +31,18 @@ def create_app(config=None):
             raise RuntimeError("Le fichier de clé de session doit contenir au moins 32 octets.")
     if not app.config["SECRET_KEY"]:
         raise RuntimeError("SECRET_KEY doit être défini avant le démarrage.")
+    client_key = app.config.get("CLIENT_CONTEXT_KEY")
+    client_key_file = app.config.get("CLIENT_CONTEXT_KEY_FILE") or os.environ.get(
+        "CLIENT_CONTEXT_KEY_FILE"
+    )
+    if client_key is None and client_key_file:
+        client_key = Path(client_key_file).read_bytes()
+    if client_key is not None and (not isinstance(client_key, bytes) or len(client_key) < 32):
+        raise RuntimeError("La clé de contexte client doit contenir au moins 32 octets.")
     app.extensions["cinevault_api"] = app.config.get("API_CLIENT") or APIClient(
-        app.config["API_URL"], enterprise=app.config["ENTERPRISE_ENABLED"] is True
+        app.config["API_URL"],
+        enterprise=app.config["ENTERPRISE_ENABLED"] is True,
+        client_context_key=client_key,
     )
 
     @app.context_processor
@@ -118,7 +128,8 @@ def create_app(config=None):
                 "Le service de données est indisponible. Avant de répéter une modification, vérifiez son résultat lorsque le service revient.",
             ),
         }[status]
-        return render_template("error.html", title=title, message=message), status
+        headers = {"Retry-After": str(error.retry_after)} if error.retry_after is not None else {}
+        return render_template("error.html", title=title, message=message), status, headers
 
     @app.errorhandler(404)
     def not_found(error):

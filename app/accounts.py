@@ -63,7 +63,8 @@ def account_error(exc, template, **context):
     }
     if exc.status not in messages:
         raise exc
-    return render_template(template, message=messages[exc.status], **context), exc.status
+    headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after is not None else {}
+    return render_template(template, message=messages[exc.status], **context), exc.status, headers
 
 
 @bp.route("/inscription", methods=["GET", "POST"])

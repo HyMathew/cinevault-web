@@ -1,0 +1,11 @@
+# Contexte réseau du visiteur
+
+En Enterprise distribué, le service web transmet à l'API une assertion signée de l'adresse qu'il observe pour le navigateur. Cela permet de distinguer plusieurs visiteurs derrière le même conteneur web sans croire un en-tête X-Forwarded-For fourni par le navigateur. L'utilisateur continue à utiliser les formulaires de connexion et d'inscription habituels ; ses droits dépendent toujours du mot de passe puis du bearer émis par l'API.
+
+Configurer `CLIENT_CONTEXT_KEY_FILE` dans les deux services avec une clé dédiée partagée, d'au moins 32 octets. La factory Python accepte aussi `CLIENT_CONTEXT_KEY` en bytes, prioritaire. Cette clé est distincte de la session web et de la clé des compteurs API ; elle reste hors du dépôt. Le backend doit activer `CLIENT_CONTEXT_REQUIRED=true` en déploiement avec frontend. Une clé invalide empêche le démarrage. Sans clé configurée, le client HTTP conserve le mode API direct pour les usages locaux explicitement choisis.
+
+Le vrai APIClient signe l'adresse canonique IPv4/IPv6, une seconde Unix, la méthode, le chemin et le SHA-256 des octets JSON UTF-8 qu'il envoie. L'API vérifie la signature et un écart d'horloge maximal de 30 secondes. Une adresse avec zone IPv6, un contexte de requête absent ou un pair inutilisable produit une erreur contrôlée ; aucun header navigateur n'est recopié comme preuve d'adresse. Les méthodes injectables `login(data)` et `register(data)` conservent leur signature. Aucun retry ni suivi de redirection.
+
+Ce mécanisme identifie la source du budget et ne chiffre pas le transport. Il exige des horloges synchronisées et un lien web–API protégé. Plusieurs personnes derrière une véritable adresse NAT commune partagent encore une source. Les en-têtes signés ne remplacent jamais les contrôles CSRF, bearer, rôle ou propriétaire. Les comptes et données métier restent exclusivement gérés par l'API.
+
+Si l'API refuse une connexion ou une inscription avec 429, le formulaire conserve son message contrôlé et transmet au navigateur le délai Retry-After entier validé entre 1 et 3600 secondes. Une valeur invalide est ignorée. Les mots de passe ne sont jamais réaffichés. Les tests web emploient un transport simulé ; la vérification réelle des deux conteneurs constitue une preuve distincte.

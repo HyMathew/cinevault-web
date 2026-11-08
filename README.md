@@ -11,6 +11,7 @@ Documentation : [comptes et transmission de l'identité](docs/accounts.md), [col
 - `ENTERPRISE_ENABLED=true` : active les routes et écrans Enterprise ; configurer aussi le backend avant activation.
 - `API_URL` : URL interne de l'API, `http://cinevault-api:8000` par défaut ; ajuster selon le DNS de la stack.
 - `COOKIE_SECURE=true` : à activer lorsque le navigateur accède au service par HTTPS.
+- `CLIENT_CONTEXT_KEY_FILE` : clé dédiée partagée avec l'API pour [signer la source du visiteur](docs/client-context.md) ; au moins 32 octets, hors dépôt. L'API exige ce contexte en déploiement avec `CLIENT_CONTEXT_REQUIRED=true`.
 
 Le point `GET /health` vérifie uniquement que le processus web répond ; il ne prouve pas la disponibilité de l'API.
 

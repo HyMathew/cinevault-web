@@ -29,10 +29,14 @@ Le concept visuel `concept.png` est une maquette générée ; ses données ficti
 - B : `GET` et `POST /films/nouveau`, validation `app/forms.py`, templates `form.html` et `detail.html` ; le traitement transmet les données à l'API.
 - C : `GET /films/<id>`, client `app/api_client.py`, template `detail.html`. Les données viennent du fichier JSON **via l'API** ; le serveur web n'accède pas au fichier.
 
-`tests/test_exercices_pedagogiques.py` teste séparément les trois rendus avec un client API simulé pour B et C. La preuve interservices avec fichier réel est distincte des tests simulés et doit être exécutée avec les deux services ; voir l'index des preuves dans le dossier de travail du projet. Les données des tests sont fictives.
+`tests/test_exercices_pedagogiques.py` teste séparément les trois rendus avec un client API simulé pour B et C. Une vérification interservices avec fichier réel doit être exécutée avec les deux services ; les anciens journaux privés de développement ne sont pas inclus dans ce dépôt et ne constituent pas une preuve publique. Les données des tests sont fictives. Le déploiement complet nécessite aussi le projet d'infrastructure CineVault, qui fournit les configurations Compose et Swarm.
 
 ## Qualité et CI
 
 Voir les [commandes, contrôles et limites](docs/quality.md). Les configurations de CI ne constituent pas une preuve d’exécution distante ; aucun badge de succès n’est ajouté avant un résultat GitHub réel.
 
 Le [socle d’exécution spécialisé et ses limites de reconstruction](docs/runtime.md) décrit les deux étapes de construction et les composants conservés.
+
+## Licence et ressources
+
+Le code original et sa documentation sont sous [licence MIT](LICENSE). Les dépendances tierces et les médias référencés conservent leurs propres licences. `concept.png` est une illustration générée pour la conception, avec des contenus fictifs ; elle n'est ni chargée par l'application, ni présentée comme une capture de fonctionnement. Les affiches externes, lorsqu'elles sont activées, affichent leur provenance et leurs conditions séparément.

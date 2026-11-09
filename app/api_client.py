@@ -10,10 +10,12 @@ from urllib.parse import quote, urlsplit
 import requests
 from flask import has_request_context, request
 
+from .response_contracts import _text, allows_no_content, valid_response
+
 
 def safe_poster(value):
     if not isinstance(value, dict) or any(
-        not isinstance(value.get(k), str)
+        not _text(value.get(k))
         for k in ("image_url", "source_url", "license_url", "artist", "license")
     ):
         return None
@@ -92,11 +94,16 @@ class APIClient:
                 retry_after=retry_after,
             )
         if response.status_code == 204:
-            return None
+            if allows_no_content(method, path):
+                return None
+            raise APIError(503, "Réponse invalide du service de données.")
         try:
-            return response.json()
+            result = response.json()
         except ValueError as exc:
             raise APIError(503, "Réponse invalide du service de données.") from exc
+        if not valid_response(method, path, result):
+            raise APIError(503, "Réponse invalide du service de données.")
+        return result
 
     def list(self, q="", support=""):
         if self.enterprise:

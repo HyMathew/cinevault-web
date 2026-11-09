@@ -7,3 +7,5 @@
 .checkbox-row{display:flex;align-items:center;gap:12px;font-weight:normal}.checkbox-row input{width:auto;min-height:24px;min-width:24px}.field legend{font-weight:bold}.account-card{overflow-wrap:anywhere}
 
 .movie-poster{margin:24px 0;max-width:240px}.movie-poster img{display:block;max-width:100%;height:auto;aspect-ratio:2/3;object-fit:contain;background:var(--surface);border:1px solid var(--line)}.movie-poster figcaption{font:12px/1.5 Arial,sans-serif;color:var(--muted);margin-top:8px;overflow-wrap:anywhere}.movie-poster.compact{display:flex;align-items:flex-start;gap:12px;max-width:300px;margin:12px 0 0}.movie-poster.compact img{width:96px;flex:0 0 96px;aspect-ratio:auto}.movie-poster.compact figcaption{min-width:0;max-width:180px;margin:0;font-size:12px;font-weight:normal}
+
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}

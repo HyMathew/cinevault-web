@@ -1,0 +1,44 @@
+{% macro nav_link(href, label, current=false, class='') -%}
+<a href="{{ href }}"{% if current %} aria-current="page"{% endif %}{% if class %} class="{{ class }}"{% endif %}>{{ label }}</a>
+{%- endmacro %}
+{% set endpoint = request.endpoint %}
+{% if management %}
+  {% set primary = [(url_for('pages.catalogue',view='manage'),'Inventaire',endpoint == 'pages.catalogue'),(url_for('lending.loan_list',scope='all'),'Emprunts',endpoint == 'lending.loan_list'),(url_for('lending.reservation_list',scope='all'),'Réservations',endpoint == 'lending.reservation_list'),(url_for('insights.dashboard',scope='all'),'Statistiques',endpoint == 'insights.dashboard')] %}
+{% elif enterprise and g.user %}
+  {% set primary = [(url_for('pages.catalogue'),'Catalogue',endpoint == 'pages.catalogue'),(url_for('personal.collection_list'),'Ma collection',endpoint == 'personal.collection_list'),(url_for('insights.dashboard'),'Mon espace',endpoint == 'insights.dashboard')] %}
+{% else %}
+  {% set primary = [(url_for('pages.home'),'Accueil',endpoint == 'pages.home'),(url_for('pages.catalogue'),'Catalogue',endpoint == 'pages.catalogue')] %}
+{% endif %}
+<nav class="primary-nav desktop-only" aria-label="Navigation principale">
+  {% for href,label,current in primary %}{{ nav_link(href,label,current) }}{% endfor %}
+</nav>
+<details class="navigation-menu{{ ' mobile-menu-only' if enterprise and not g.user else '' }}">
+  <summary>Menu</summary>
+  <nav class="menu-links" aria-label="Autres destinations">
+    <div class="mobile-primary">
+      {% for href,label,current in primary %}{{ nav_link(href,label,current) }}{% endfor %}
+    </div>
+    {% if enterprise and g.user %}
+      {% if management %}
+        {{ nav_link(url_for('transfer.catalogue'),'Import / export',endpoint == 'transfer.catalogue') }}
+        {% if g.user.role == 'admin' %}{{ nav_link(url_for('accounts.administration'),'Administration',endpoint == 'accounts.administration') }}{% endif %}
+        {{ nav_link(url_for('pages.catalogue'),'Espace membre') }}
+      {% else %}
+        {{ nav_link(url_for('insights.discover'),'Découvrir',endpoint == 'insights.discover') }}
+        {{ nav_link(url_for('lending.loan_list',scope='mine'),'Emprunts',endpoint == 'lending.loan_list') }}
+        {{ nav_link(url_for('lending.reservation_list',scope='mine'),'Réservations',endpoint == 'lending.reservation_list') }}
+        {% if can_manage %}{{ nav_link(url_for('pages.catalogue',view='manage'),'Gestion') }}{% endif %}
+      {% endif %}
+      {{ nav_link(url_for('accounts.profile'),'Mon profil',endpoint == 'accounts.profile','mobile-only') }}
+      <form method="post" action="{{ url_for('accounts.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="nav-button">Déconnexion</button></form>
+    {% elif not enterprise %}
+      {{ nav_link(url_for('pages.film_form'),'Ajouter un film',endpoint == 'pages.film_form') }}
+    {% else %}
+      {{ nav_link(url_for('accounts.login'),'Connexion',endpoint == 'accounts.login','mobile-only') }}
+    {% endif %}
+  </nav>
+</details>
+{% if enterprise %}
+  {% if g.user %}{{ nav_link(url_for('accounts.profile'),'Mon profil',endpoint == 'accounts.profile','account-link desktop-only') }}
+  {% else %}{{ nav_link(url_for('accounts.login'),'Connexion',endpoint == 'accounts.login','account-link desktop-only') }}{% endif %}
+{% endif %}

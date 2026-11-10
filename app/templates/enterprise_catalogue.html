@@ -1,11 +1,40 @@
-{% extends 'base.html' %}{% block title %}Catalogue partagé · CineVault{% endblock %}
-{% block content %}<section class="intro"><p class="eyebrow">LE CATALOGUE COMMUN</p><h1>Trouvez votre prochain film.</h1><p>Une œuvre, plusieurs exemplaires. Explorez les titres de la vidéothèque et les supports disponibles.</p>{% if can_manage %}<a class="button primary" href="{{ url_for('pages.film_form') }}">Ajouter un film</a>{% endif %}</section>
-<form class="filters enterprise-filters" method="get" action="{{ url_for('pages.catalogue') }}">
-<div><label for="q">Rechercher</label><input id="q" name="q" value="{{ query.get('q','') }}" maxlength="200" placeholder="Titre, réalisateur ou acteur"></div>
-<div><label for="genre">Genre</label><input id="genre" name="genre" value="{{ query.get('genre','') }}" maxlength="80" placeholder="Science-fiction"></div>
-<div><label for="year">Année</label><input id="year" name="year" type="number" min="1888" max="2100" value="{{ query.get('year','') }}"></div>
-<div><label for="support">Support</label><select id="support" name="support"><option value="">Tous les supports</option>{% for value,label in supports.items() %}<option value="{{ value }}" {% if query.get('support') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-<div><label for="sort">Trier par</label><select id="sort" name="sort">{% for value,label in [('title','Titre A–Z'),('-title','Titre Z–A'),('year','Année croissante'),('-year','Année décroissante')] %}<option value="{{ value }}" {% if query.get('sort','title') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><button class="button secondary">Rechercher</button><a class="reset" href="{{ url_for('pages.catalogue') }}">Effacer les filtres</a></form>
-<p class="result-line" role="status">{{ total }} résultat{{ 's' if total != 1 else '' }}{% if films %} · {{ offset+1 }} à {{ offset+films|length }}{% endif %}</p>
-{% if films %}<div class="table-scroll"><table><thead><tr><th scope="col">Film</th><th scope="col">Réalisateur</th><th scope="col">Année</th><th scope="col">Exemplaires</th></tr></thead><tbody>{% for film in films %}<tr><th scope="row"><a href="{{ url_for('pages.detail',film_id=film.id) }}">{{ film.titre }}</a>{% if film.poster %}{% set poster=film.poster %}{% set poster_title=film.titre %}{% set poster_compact=true %}{% include 'poster.html' %}{% endif %}</th><td data-label="Réalisateur">{{ film.realisateur }}</td><td data-label="Année">{{ film.annee }}</td><td data-label="Exemplaires">{{ film.copy_count }}{% if film.copy_supports %} · {% for support in film.copy_supports %}{{ supports.get(support,support) }}{{ ', ' if not loop.last else '' }}{% endfor %}{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty"><h2>Aucun film trouvé.</h2><p>Essayez un autre titre ou assouplissez les filtres.</p><a href="{{ url_for('pages.catalogue') }}">Voir tout le catalogue</a></div>{% endif %}
-<nav class="actions section" aria-label="Pagination du catalogue">{% if offset > 0 %}{% set previous_query=dict(query,offset=[0,offset-limit]|max) %}<a class="button secondary" href="{{ url_for('pages.catalogue',**previous_query) }}">Précédent</a>{% endif %}{% if offset+limit < total %}{% set next_query=dict(query,offset=offset+limit) %}<a class="button secondary" href="{{ url_for('pages.catalogue',**next_query) }}">Suivant</a>{% endif %}</nav>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}{{ 'Inventaire' if management_view else 'Le catalogue' }} · CineVault{% endblock %}
+{% block content %}
+<section class="catalogue-intro section-heading">
+  <div><h1>{{ 'Inventaire' if management_view else 'Le catalogue' }}</h1><p>Explorez les films de la vidéothèque.</p></div>
+  {% if management_view %}<a class="button primary" href="{{ url_for('pages.film_form') }}">Ajouter un film</a>{% endif %}
+</section>
+{% set secondary_active = query.get('genre') or query.get('year') or query.get('support') %}
+<form class="catalogue-search" method="get" action="{{ url_for('pages.catalogue') }}">
+  {% if management_view %}<input type="hidden" name="view" value="manage">{% endif %}
+  {% if query.get('limit') %}<input type="hidden" name="limit" value="{{ query['limit'] }}">{% endif %}
+  <div class="search-field"><label for="q">Rechercher</label><input id="q" name="q" value="{{ query.get('q','') }}" maxlength="200" placeholder="Titre, réalisateur ou acteur"></div>
+  <button class="button primary search-submit">Rechercher</button>
+  <details class="catalogue-filters"{% if secondary_active %} open{% endif %}>
+    <summary>Filtres{% if secondary_active %} actifs{% endif %}</summary>
+    <div class="filter-fields">
+      <div><label for="genre">Genre</label><input id="genre" name="genre" value="{{ query.get('genre','') }}" maxlength="80" placeholder="Science-fiction"></div>
+      <div><label for="year">Année</label><input id="year" name="year" type="number" min="1888" max="2100" value="{{ query.get('year','') }}"></div>
+      <div><label for="support">Support</label><select id="support" name="support"><option value="">Tous les supports</option>{% for value,label in supports.items() %}<option value="{{ value }}"{% if query.get('support') == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <button class="button secondary">Appliquer les filtres</button>
+    </div>
+  </details>
+  <div class="sort-field"><label for="sort">Trier par</label><select id="sort" name="sort">{% for value,label in [('title','Titre A–Z'),('-title','Titre Z–A'),('year','Année croissante'),('-year','Année décroissante')] %}<option value="{{ value }}"{% if query.get('sort','title') == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="button secondary">Trier</button></div>
+  {% if query.get('q') or secondary_active or query.get('sort','title') != 'title' %}<a class="reset" href="{{ url_for('pages.catalogue',view='manage') if management_view else url_for('pages.catalogue') }}">Effacer les filtres</a>{% endif %}
+</form>
+<p class="result-line" role="status">{{ total }} film{{ 's' if total != 1 else '' }}{% if films and (offset or total > films|length) %} · {{ offset+1 }} à {{ offset+films|length }}{% endif %}</p>
+{% if films %}
+  {% if management_view %}
+  <div class="table-scroll"><table class="inventory-table"><caption class="visually-hidden">Films de la vidéothèque</caption><thead><tr><th scope="col">Film</th><th scope="col">Réalisateur</th><th scope="col">Année</th><th scope="col">Exemplaires</th></tr></thead><tbody>{% for film in films %}<tr><th scope="row"><a href="{{ url_for('pages.detail',film_id=film.id,return_to=url_for('pages.catalogue',**query)) }}">{{ film.titre }}</a></th><td><span class="cell-label">Réalisateur : </span>{{ film.realisateur }}</td><td><span class="cell-label">Année : </span>{{ film.annee }}</td><td><span class="cell-label">Exemplaires : </span>{{ film.copy_count }}{% if film.copy_supports %} · {% for support in film.copy_supports %}{{ supports.get(support,support) }}{{ ', ' if not loop.last else '' }}{% endfor %}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}
+  <ul class="film-results">
+    {% for film in films %}<li class="film-result">
+      <div class="result-artwork">{% if film.poster %}{% set poster=film.poster %}{% set poster_title=film.titre %}{% include 'poster.html' %}{% else %}{% include '_poster_fallback.html' %}{% endif %}</div>
+      <div class="result-content"><h2><a href="{{ url_for('pages.detail',film_id=film.id,return_to=url_for('pages.catalogue',**query)) }}">{{ film.titre }}</a></h2><p>{{ film.realisateur }} · {{ film.annee }} · {{ film.copy_count }} exemplaire{{ 's' if film.copy_count != 1 else '' }}{% if film.copy_supports %} · {% for support in film.copy_supports %}{{ supports.get(support,support) }}{{ ', ' if not loop.last else '' }}{% endfor %}{% endif %}</p><a class="button primary" href="{{ url_for('pages.detail',film_id=film.id,return_to=url_for('pages.catalogue',**query)) }}" aria-label="Voir le film : {{ film.titre }}">Voir le film</a></div>
+    </li>{% endfor %}
+  </ul>
+  {% endif %}
+{% else %}<div class="empty"><h2>{{ 'Aucun film trouvé.' if query.get('q') or secondary_active else 'Le catalogue est encore vide.' }}</h2><p>{{ 'Essayez un autre titre ou assouplissez les filtres.' if query.get('q') or secondary_active else 'Les films de la vidéothèque apparaîtront ici dès leur ajout.' }}</p>{% if query.get('q') or secondary_active %}<a href="{{ url_for('pages.catalogue',view='manage') if management_view else url_for('pages.catalogue') }}">Voir tout le catalogue</a>{% endif %}</div>{% endif %}
+{% if offset > 0 or offset+limit < total %}<nav class="actions pagination" aria-label="Pagination du catalogue">{% if offset > 0 %}{% set previous_query=dict(query,offset=[0,offset-limit]|max) %}<a class="button secondary" href="{{ url_for('pages.catalogue',**previous_query) }}">Précédent</a>{% endif %}{% if offset+limit < total %}{% set next_query=dict(query,offset=offset+limit) %}<a class="button secondary" href="{{ url_for('pages.catalogue',**next_query) }}">Suivant</a>{% endif %}</nav>{% endif %}
+{% endblock %}

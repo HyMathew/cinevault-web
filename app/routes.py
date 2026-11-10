@@ -1,4 +1,5 @@
 import secrets
+from urllib.parse import parse_qsl, urlsplit
 
 from flask import (
     Blueprint,
@@ -47,13 +48,28 @@ def home():
 @pages.get("/films")
 def catalogue():
     if enterprise():
-        if set(request.args) - {"q", "genre", "year", "support", "sort", "limit", "offset"} or any(
-            len(request.args.getlist(key)) != 1 for key in request.args
-        ):
+        if set(request.args) - {
+            "q",
+            "genre",
+            "year",
+            "support",
+            "sort",
+            "limit",
+            "offset",
+            "view",
+        } or any(len(request.args.getlist(key)) != 1 for key in request.args):
             abort(422)
         query = request.args.to_dict()
-        result = api().search(include_posters=True, **query)
-        return render_template("enterprise_catalogue.html", **result, query=query)
+        view = query.get("view", "member")
+        if view not in ("member", "manage"):
+            abort(422)
+        if view == "manage":
+            require_manager()
+        api_query = {key: value for key, value in query.items() if key != "view"}
+        result = api().search(include_posters=True, **api_query)
+        return render_template(
+            "enterprise_catalogue.html", **result, query=query, management_view=view == "manage"
+        )
     q = request.args.get("q", "").strip()
     support = request.args.get("support", "")
     return render_template("catalogue.html", films=api().list(q, support), q=q, support=support)
@@ -73,11 +89,33 @@ def detail(film_id):
         own_reservations = api().reservations(
             auth_token(), status="waiting", scope="mine", movie_id=film_id
         )
+    catalogue_url = url_for("pages.catalogue")
+    return_to = request.args.get("return_to", catalogue_url)
+    try:
+        target = urlsplit(return_to)
+        pairs = parse_qsl(target.query, keep_blank_values=True, max_num_fields=8)
+        keys = [key for key, _ in pairs]
+        valid_return = (
+            len(request.args.getlist("return_to")) <= 1
+            and not any(ord(char) < 32 or ord(char) == 127 for char in return_to)
+            and not target.scheme
+            and not target.netloc
+            and not target.fragment
+            and target.path == catalogue_url
+            and len(keys) == len(set(keys))
+            and not set(keys) - {"q", "genre", "year", "support", "sort", "limit", "offset", "view"}
+            and dict(pairs).get("view", "member") in ("member", "manage")
+        )
+    except ValueError:
+        valid_return = False
+    if not valid_return:
+        return_to = catalogue_url
     return render_template(
         "enterprise_detail.html" if enterprise() else "detail.html",
         film=film,
         own_reservations=own_reservations,
         own_loans=own_loans,
+        return_to=return_to,
     )
 
 

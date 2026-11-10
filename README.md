@@ -23,6 +23,8 @@ Les formulaires utilisent un jeton CSRF en session et conservent la saisie en ca
 
 Le concept visuel `concept.png` est une maquette générée ; ses données fictives ne sont pas chargées dans l'application.
 
+Le [catalogue membre et sa navigation contextuelle](docs/member-presentation.md) conservent les formulaires natifs et les permissions existantes. Les rôles de gestion peuvent choisir l'inventaire avec `/films?view=manage` ; ce paramètre de présentation n'est jamais envoyé à l'API.
+
 ## Exercices du sujet
 
 - A : `GET /page-simple`, route `app/routes.py`, template `app/templates/simple.html`.

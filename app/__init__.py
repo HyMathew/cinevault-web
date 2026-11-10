@@ -142,4 +142,15 @@ def create_app(config=None):
             "error.html", title="Page introuvable", message="Cette page ou ce film est introuvable."
         ), 404
 
+    @app.errorhandler(403)
+    @app.errorhandler(422)
+    def request_error(error):
+        from flask import render_template
+
+        title, message = {
+            403: ("Accès interdit", "Votre rôle ne permet pas cette action."),
+            422: ("Données invalides", "Vérifiez les champs ou les filtres utilisés."),
+        }[error.code]
+        return render_template("error.html", title=title, message=message), error.code
+
     return app

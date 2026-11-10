@@ -189,7 +189,12 @@ def administration():
     if g.user["role"] != "admin":
         abort(403)
     offset = request.args.get("offset", "0")
-    if not offset.isdecimal() or not 0 <= int(offset) <= 10000:
+    if (
+        not 1 <= len(offset) <= 5
+        or not offset.isascii()
+        or not offset.isdecimal()
+        or not 0 <= int(offset) <= 10000
+    ):
         abort(422)
     return render_template("account_admin.html", accounts=api().users(token(), int(offset)))
 

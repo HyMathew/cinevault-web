@@ -43,7 +43,7 @@ def test_exercice_b_formulaire_traitement_et_rendu_jinja():
             "titre": "Les étoiles",
             "realisateur": "A. Martin",
             "annee": "2004",
-            "acteurs": "Alice, Bob",
+            "acteurs": ["Alice", "Bob"],
             "support": "dvd",
             "synopsis": "Une fiction.",
         },

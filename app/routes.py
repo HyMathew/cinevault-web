@@ -13,7 +13,7 @@ from flask import (
 )
 
 from .api_client import APIError
-from .forms import validate
+from .forms import list_values, validate, validate_names
 
 pages = Blueprint("pages", __name__)
 
@@ -91,8 +91,9 @@ def film_form(film_id=None):
     if editing and request.method == "GET" and film is None:
         abort(404)
     values = dict(film)
-    if editing:
-        values["acteurs"] = ", ".join(values.get("acteurs", []))
+    values.setdefault("acteurs", [""])
+    if enterprise():
+        values.setdefault("genres", [""])
     errors = {}
     message = None
     if enterprise() and request.method == "GET" and request.args.get("metadata_id"):
@@ -110,7 +111,7 @@ def film_form(film_id=None):
                         "titre": metadata["title"],
                         "annee": metadata["year"],
                         "realisateur": metadata["director"],
-                        "acteurs": ", ".join(metadata["actors"]),
+                        "acteurs": metadata["actors"],
                         "genres": metadata["genres"],
                     }.items()
                     if value
@@ -122,14 +123,42 @@ def film_form(film_id=None):
             message = "Proposition Wikidata préremplie. Vérifiez les champs et complétez le résumé avant enregistrement."
     if request.method == "POST":
         values = request.form.to_dict()
-        form_data = request.form.to_dict()
+        list_fields = {"acteurs": 120} | ({"genres": 80} if enterprise() else {})
+        for name, limit in list_fields.items():
+            values[name] = list_values(request.form, name, limit)
+        if "list_action" in request.form:
+            actions = request.form.getlist("list_action")
+            parts = actions[0].split(":")
+            if len(actions) != 1 or len(parts) not in (2, 3) or parts[1] not in list_fields:
+                abort(422)
+            operation, name = parts[:2]
+            if operation == "add" and len(parts) == 2:
+                if len(values[name]) >= 30:
+                    errors[name] = "La liste ne peut pas dépasser 30 éléments."
+                else:
+                    values[name].append("")
+            elif (
+                operation == "remove"
+                and len(parts) == 3
+                and 1 <= len(parts[2]) <= 2
+                and parts[2].isascii()
+                and parts[2].isdecimal()
+                and int(parts[2]) < len(values[name])
+            ):
+                values[name].pop(int(parts[2]))
+            else:
+                abort(422)
+            return render_template(
+                template, editing=editing, values=values, errors=errors, message=None
+            ), 422 if errors else 200
+        form_data = dict(values)
         if enterprise() and editing:
             form_data["support"] = "autre"
         data, errors = validate(form_data)
         if enterprise():
-            data["genres"] = [
-                x.strip() for x in request.form.get("genres", "").split(",") if x.strip()
-            ]
+            data["genres"], valid_genres = validate_names(values["genres"], 80)
+            if not valid_genres:
+                errors["genres"] = "Indiquez au plus 30 genres de 80 caractères."
             if request.form.get("clear_external") == "1":
                 data["external_id"] = None
             elif request.form.get("external_id"):

@@ -60,6 +60,9 @@ def create_app(config=None):
     def verify_csrf():
         if request.endpoint == "transfer.catalogue":
             request.max_content_length = 2 * 1024 * 1024
+        elif request.endpoint == "pages.film_form":
+            # URL encoding plus reversible list originals can exceed 64 KiB.
+            request.max_content_length = 256 * 1024
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
             expected = session.get("csrf_token", "")
             received = request.form.get("csrf_token", "")

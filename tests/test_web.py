@@ -69,7 +69,7 @@ def valid(token):
         "titre": "Nouveau film",
         "annee": "2000",
         "realisateur": "Martin",
-        "acteurs": "A, B",
+        "acteurs": ["A", "B"],
         "support": "dvd",
         "synopsis": "Résumé",
     }

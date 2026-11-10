@@ -1,3 +1,5 @@
+import json
+
 from test_accounts import PROFILE, TOKEN, csrf
 from test_accounts import accounts as accounts
 
@@ -69,7 +71,7 @@ def test_manager_forms_relay_version_and_preserve_stale_edits(accounts):
         "realisateur": "Denis Villeneuve",
         "acteurs": "Acteur",
         "synopsis": "Texte saisi",
-        "genres": "Science-fiction, Drame",
+        "genres": ["Science-fiction", "Drame"],
     }
     assert client.post("/films/film-id/modifier", data=body).status_code == 303
     assert api.update.call_args.kwargs == {"token": TOKEN, "version": '"movie-version"'}
@@ -163,8 +165,12 @@ def test_enterprise_client_sends_version_and_canonical_metadata(monkeypatch):
     }
     assert client.update("film-id", data, TOKEN, '"old"')["titre"] == "Dune"
     assert calls[0][0:2] == ("PUT", "http://api/api/v1/movies/film-id")
-    assert calls[0][2]["headers"] == {"Authorization": "Bearer " + TOKEN, "If-Match": '"old"'}
-    assert "support" not in calls[0][2]["json"]
+    assert calls[0][2]["headers"] == {
+        "Authorization": "Bearer " + TOKEN,
+        "If-Match": '"old"',
+        "Content-Type": "application/json",
+    }
+    assert "support" not in json.loads(calls[0][2]["data"])
 
 
 def test_copy_timeout_preserves_operation_key_without_automatic_retry(accounts):

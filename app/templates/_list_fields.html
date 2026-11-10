@@ -1,0 +1,18 @@
+{% macro list_fields(name, title, singular, limit, values, errors) -%}
+{% set entries = values.get(name, []) %}
+<fieldset class="field" id="{{ name }}-group" aria-describedby="{{ name }}-hint{% if errors.get(name) %} {{ name }}-error{% endif %}">
+  <legend>{{ title }}</legend>
+  <p class="hint" id="{{ name }}-hint">Un {{ singular|lower }} par champ, jusqu’à 30, avec {{ limit }} caractères maximum par champ. Les virgules et retours à la ligne font partie du texte.</p>
+  <input type="hidden" name="_original_{{ name }}" value="{{ entries|tojson|forceescape }}">
+  {% if errors.get(name) %}<p class="field-error" id="{{ name }}-error">{{ errors[name] }}</p>{% endif %}
+  {% for value in entries %}
+  <div class="field">
+    <label for="{{ name }}-{{ loop.index0 }}">{{ singular }} {{ loop.index }}</label>
+    <textarea id="{{ name }}-{{ loop.index0 }}" name="{{ name }}" rows="2" aria-describedby="{{ name }}-hint{% if errors.get(name) %} {{ name }}-error{% endif %}"{% if errors.get(name) %} aria-invalid="true"{% endif %}>
+{{ value }}</textarea>
+    <button class="button secondary" type="submit" name="list_action" value="remove:{{ name }}:{{ loop.index0 }}" formnovalidate formaction="{{ request.path }}#{{ name }}-group">Retirer {{ singular|lower }} {{ loop.index }}</button>
+  </div>
+  {% else %}<p>Aucun {{ singular|lower }} renseigné.</p>{% endfor %}
+  <button class="button secondary" type="submit" name="list_action" value="add:{{ name }}" formnovalidate formaction="{{ request.path }}#{{ name }}-group">Ajouter un {{ singular|lower }}</button>
+</fieldset>
+{%- endmacro %}

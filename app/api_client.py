@@ -64,6 +64,22 @@ class APIClient:
 
     def request(self, method, path, **kwargs):
         timeout = kwargs.pop("timeout", (2, 5))
+        if (
+            method in ("POST", "PUT")
+            and "json" in kwargs
+            and any(
+                path == root or path.startswith(root + "/")
+                for root in ("/api/films", "/api/v1/movies")
+            )
+        ):
+            # ASCII escaping can triple valid Unicode movie bodies past the API limit.
+            try:
+                kwargs["data"] = json.dumps(
+                    kwargs.pop("json"), ensure_ascii=False, allow_nan=False
+                ).encode("utf-8")
+            except (ValueError, TypeError, UnicodeError) as exc:
+                raise APIError(422, "Données de film invalides.") from exc
+            kwargs["headers"] = {**kwargs.get("headers", {}), "Content-Type": "application/json"}
         try:
             response = requests.request(
                 method, self.base_url + path, timeout=timeout, allow_redirects=False, **kwargs
@@ -74,11 +90,17 @@ class APIClient:
             raise APIError(503, "Redirection inattendue du service de données.")
         if response.status_code >= 400:
             try:
-                error = response.json().get("error", {})
-            except (ValueError, AttributeError):
-                error = {}
-            if not isinstance(error, dict):
-                error = {}
+                result = response.json()
+            except (ValueError, RecursionError) as exc:
+                raise APIError(503, "Réponse invalide du service de données.") from exc
+            error = result.get("error") if isinstance(result, dict) else None
+            if not isinstance(error, dict) or not _text(error.get("message")):
+                raise APIError(503, "Réponse invalide du service de données.")
+            fields = error.get("fields", {})
+            if not isinstance(fields, dict) or any(
+                not _text(key) or not _text(value) for key, value in fields.items()
+            ):
+                raise APIError(503, "Réponse invalide du service de données.")
             try:
                 retry_after = (
                     int(getattr(response, "headers", {}).get("Retry-After", ""))
@@ -89,8 +111,8 @@ class APIClient:
                 retry_after = None
             raise APIError(
                 response.status_code,
-                error.get("message", "Une erreur est survenue."),
-                error.get("fields"),
+                error["message"],
+                fields,
                 retry_after=retry_after,
             )
         if response.status_code == 204:
@@ -99,7 +121,7 @@ class APIClient:
             raise APIError(503, "Réponse invalide du service de données.")
         try:
             result = response.json()
-        except ValueError as exc:
+        except (ValueError, RecursionError) as exc:
             raise APIError(503, "Réponse invalide du service de données.") from exc
         if not valid_response(method, path, result):
             raise APIError(503, "Réponse invalide du service de données.")

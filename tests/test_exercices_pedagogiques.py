@@ -19,7 +19,11 @@ class StubAPI:
 
 def make_client(api):
     return create_app(
-        {"TESTING": True, "SECRET_KEY": "test-seulement", "API_CLIENT": api}
+        {
+            "TESTING": True,
+            "SECRET_KEY": "synthetic-academic-session-key-32-bytes-minimum",
+            "API_CLIENT": api,
+        }
     ).test_client()
 
 

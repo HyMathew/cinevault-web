@@ -163,7 +163,7 @@ def native_client(monkeypatch, enterprise, film=None):
     app = create_app(
         {
             "TESTING": True,
-            "SECRET_KEY": "synthetic-key",
+            "SECRET_KEY": "synthetic-list-session-key-32-bytes-minimum",
             "ENTERPRISE_ENABLED": enterprise,
             "API_CLIENT": APIClient("http://offline.invalid", enterprise=enterprise),
         }

@@ -47,7 +47,7 @@ def accounts():
     app = create_app(
         {
             "TESTING": True,
-            "SECRET_KEY": "only-for-unit-tests",
+            "SECRET_KEY": "synthetic-unit-test-session-key-32-bytes-minimum",
             "ENTERPRISE_ENABLED": True,
             "API_CLIENT": api,
             "SESSION_COOKIE_SECURE": True,

@@ -55,7 +55,13 @@ class FakeAPI:
 @pytest.fixture
 def setup():
     api = FakeAPI()
-    app = create_app({"TESTING": True, "SECRET_KEY": "test-only-key", "API_CLIENT": api})
+    app = create_app(
+        {
+            "TESTING": True,
+            "SECRET_KEY": "synthetic-test-session-key-32-bytes-minimum",
+            "API_CLIENT": api,
+        }
+    )
     return app.test_client(), api
 
 

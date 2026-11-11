@@ -35,7 +35,7 @@ def test_auth_client_signs_observed_peer_and_exact_request_body(monkeypatch, ope
     app = create_app(
         {
             "TESTING": True,
-            "SECRET_KEY": "synthetic-cookie-key",
+            "SECRET_KEY": "synthetic-cookie-session-key-32-bytes-minimum",
             "ENTERPRISE_ENABLED": True,
             "CLIENT_CONTEXT_KEY": KEY,
         }
@@ -77,14 +77,19 @@ def test_client_context_key_file_is_loaded_and_invalid_key_fails(tmp_path):
     app = create_app(
         {
             "TESTING": True,
-            "SECRET_KEY": "synthetic-cookie-key",
+            "SECRET_KEY": "synthetic-cookie-session-key-32-bytes-minimum",
             "ENTERPRISE_ENABLED": True,
             "CLIENT_CONTEXT_KEY_FILE": str(keyfile),
         }
     )
     assert app.extensions["cinevault_api"].client_context_key == KEY
     with pytest.raises(RuntimeError):
-        create_app({"SECRET_KEY": "synthetic-cookie-key", "CLIENT_CONTEXT_KEY": b"short"})
+        create_app(
+            {
+                "SECRET_KEY": "synthetic-cookie-session-key-32-bytes-minimum",
+                "CLIENT_CONTEXT_KEY": b"short",
+            }
+        )
 
 
 @pytest.mark.parametrize("value,expected", [("60", 60), ("invalid", None), ("99999", None)])

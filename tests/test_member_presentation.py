@@ -123,7 +123,13 @@ def test_enterprise_footer_keeps_legacy_route_out_of_member_navigation(accounts)
     page = client.get("/films").get_data(as_text=True)
     assert 'href="/page-simple"' not in page
     assert "Vidéothèque collaborative" in page
-    legacy = create_app({"TESTING": True, "SECRET_KEY": "synthetic-legacy-test", "API_CLIENT": api})
+    legacy = create_app(
+        {
+            "TESTING": True,
+            "SECRET_KEY": "synthetic-legacy-session-key-32-bytes-minimum",
+            "API_CLIENT": api,
+        }
+    )
     api.list.return_value = []
     page = legacy.test_client().get("/films").get_data(as_text=True)
     assert 'href="/page-simple"' in page

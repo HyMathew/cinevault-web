@@ -27,10 +27,16 @@ def create_app(config=None):
     secret_file = app.config.get("SECRET_KEY_FILE") or os.environ.get("SECRET_KEY_FILE")
     if secret_file:
         app.config["SECRET_KEY"] = Path(secret_file).read_bytes()
-        if len(app.config["SECRET_KEY"]) < 32:
-            raise RuntimeError("Le fichier de clé de session doit contenir au moins 32 octets.")
-    if not app.config["SECRET_KEY"]:
-        raise RuntimeError("SECRET_KEY doit être défini avant le démarrage.")
+    fallbacks = app.config.get("SECRET_KEY_FALLBACKS")
+    if fallbacks is not None and not isinstance(fallbacks, (list, tuple)):
+        raise RuntimeError("Les anciennes clés de session doivent former une liste ou un tuple.")
+    for key in [app.config["SECRET_KEY"], *(fallbacks or ())]:
+        try:
+            encoded_key = key.encode("utf-8") if isinstance(key, str) else key
+        except UnicodeEncodeError:
+            encoded_key = None
+        if not isinstance(encoded_key, bytes) or len(encoded_key) < 32:
+            raise RuntimeError("La clé de session doit contenir au moins 32 octets UTF-8 ou bruts.")
     client_key = app.config.get("CLIENT_CONTEXT_KEY")
     client_key_file = app.config.get("CLIENT_CONTEXT_KEY_FILE") or os.environ.get(
         "CLIENT_CONTEXT_KEY_FILE"

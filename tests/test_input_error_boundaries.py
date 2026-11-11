@@ -55,7 +55,7 @@ def client_with_transport(monkeypatch, status=422, payload=None, *, enterprise=F
     app = create_app(
         {
             "TESTING": True,
-            "SECRET_KEY": "synthetic-test-key",
+            "SECRET_KEY": "synthetic-boundary-session-key-32-bytes-minimum",
             "ENTERPRISE_ENABLED": enterprise,
             "API_CLIENT": APIClient("http://offline.invalid", enterprise=enterprise),
         }

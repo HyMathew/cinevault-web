@@ -6,12 +6,16 @@ Documentation : [comptes et transmission de l'identité](docs/accounts.md), [col
 
 ## Configuration
 
-- `SECRET_KEY` : obligatoire, valeur aléatoire persistante et confidentielle ; ne jamais la versionner.
+- `SECRET_KEY` : obligatoire, valeur aléatoire persistante et confidentielle d'au moins 32 octets UTF-8 ; ne jamais la versionner. La configuration Python accepte aussi des `bytes` d'au moins 32 octets.
 - `SECRET_KEY_FILE` : fichier privé d'au moins 32 octets, prioritaire sur `SECRET_KEY` ; utilisé par le mode Compose de test Enterprise.
 - `ENTERPRISE_ENABLED=true` : active les routes et écrans Enterprise ; configurer aussi le backend avant activation.
 - `API_URL` : URL interne de l'API, `http://cinevault-api:8000` par défaut ; ajuster selon le DNS de la stack.
 - `COOKIE_SECURE=true` : à activer lorsque le navigateur accède au service par HTTPS.
 - `CLIENT_CONTEXT_KEY_FILE` : clé dédiée partagée avec l'API pour [signer la source du visiteur](docs/client-context.md) ; au moins 32 octets, hors dépôt. L'API exige ce contexte en déploiement avec `CLIENT_CONTEXT_REQUIRED=true`.
+
+La validation de la clé de session est commune à la configuration, à l'environnement et au fichier, y compris en mode test. Les types autres que `str`/`bytes`, clés vides, trop courtes ou textes non encodables en UTF-8 refusent le démarrage sans afficher la valeur. Le fichier est lu comme des octets bruts : aucun espace, saut de ligne ou octet n'est retiré. Une clé valide conserve sa valeur, son type et les signatures de session existantes ; elle n'est ni remplacée ni régénérée. La longueur minimale ne prouve pas l'entropie : générer la clé avec un générateur cryptographiquement sûr et la garder stable hors dépôt.
+
+Si la configuration Python utilise `SECRET_KEY_FALLBACKS` pour une rotation Flask, fournir une liste ou un tuple d'anciennes clés valides, chacune soumise à la même limite de 32 octets. Leur ordre et leurs valeurs sont conservés : les anciens cookies peuvent être lus et les nouveaux restent signés avec la clé courante. `None` ou une séquence vide n'active aucun fallback ; aucune ancienne clé n'est chargée automatiquement.
 
 Le point `GET /health` vérifie uniquement que le processus web répond ; il ne prouve pas la disponibilité de l'API.
 

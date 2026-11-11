@@ -119,18 +119,22 @@ def test_transfer_upload_file_bound_is_independent_of_ordinary_form_bound(accoun
         "skipped_movies": 0,
         "skipped_copies": 0,
     }
-    assert (
+    # Werkzeug can spill its encoded multipart body to a temporary file. It is
+    # separate from Flask's parsed FileStorage and belongs to this test client.
+    with (
         client.post(
             "/transfert", data={**fields, "file": (io.BytesIO(b" " * 70000), "large.json")}
-        ).status_code
-        == 200
-    )
-    assert (
+        ) as response,
+        response.request.input_stream,
+    ):
+        assert response.status_code == 200
+    with (
         client.post(
             "/transfert", data={**fields, "file": (io.BytesIO(b" " * 1048577), "too-large.json")}
-        ).status_code
-        == 422
-    )
+        ) as response,
+        response.request.input_stream,
+    ):
+        assert response.status_code == 422
     assert api.import_catalogue.call_count == 1
     assert (
         client.post("/profil", data={"csrf_token": token, "display_name": "a" * 70000}).status_code

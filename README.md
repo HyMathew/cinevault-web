@@ -4,6 +4,10 @@ Service de présentation Flask/Jinja de CineVault. Il appelle une API HTTP sépa
 
 Documentation : [comptes et transmission de l'identité](docs/accounts.md), [collections privées](docs/collections.md), [prêts et retours](docs/loans.md), [réservations](docs/reservations.md), [import/export](docs/transfer.md), [tableau de bord et découverte](docs/insights.md), [recherche externe et affiches](docs/metadata.md). L'API demeure l'autorité pour les permissions et les règles métier ; le frontend ne transmet aucun rôle ou propriétaire comme preuve d'identité.
 
+[DESIGN.md](DESIGN.md) fixe l'identité graphique et les règles de présentation
+des prochains lots. La [reprise des demandes après un résultat incertain](docs/lending-recovery.md)
+précise la conservation des clés, le réessai manuel et la portée des preuves web.
+
 ## Configuration
 
 - `SECRET_KEY` : obligatoire, valeur aléatoire persistante et confidentielle d'au moins 32 octets UTF-8 ; ne jamais la versionner. La configuration Python accepte aussi des `bytes` d'au moins 32 octets.

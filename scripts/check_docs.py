@@ -9,7 +9,11 @@ from urllib.parse import unquote, urlsplit
 def markdown_errors(root):
     root = root.resolve()
     errors = []
-    for path in [root / "README.md", *sorted((root / "docs").rglob("*.md"))]:
+    for path in [
+        root / "README.md",
+        *root.glob("DESIGN.md"),
+        *sorted((root / "docs").rglob("*.md")),
+    ]:
         if not path.is_file():
             errors.append(f"Missing document: {path.relative_to(root)}")
             continue

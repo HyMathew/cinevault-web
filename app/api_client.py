@@ -411,8 +411,11 @@ class APIClient:
             headers={"Authorization": "Bearer " + token, "If-Match": version},
         )
 
-    def request_loan(self, token, data):
-        return self.account_request(token, "POST", "/loans", json=data)
+    def request_loan(self, token, data, operation_key=None):
+        headers = {"Authorization": "Bearer " + token}
+        if operation_key is not None:
+            headers["Idempotency-Key"] = operation_key
+        return self.request("POST", "/api/v1/loans", headers=headers, json=data)
 
     def loans(self, token, **query):
         return self.account_request(
@@ -440,8 +443,11 @@ class APIClient:
             token, "GET", "/reservations", params={k: v for k, v in query.items() if v != ""}
         )
 
-    def request_reservation(self, token, data):
-        return self.account_request(token, "POST", "/reservations", json=data)
+    def request_reservation(self, token, data, operation_key=None):
+        headers = {"Authorization": "Bearer " + token}
+        if operation_key is not None:
+            headers["Idempotency-Key"] = operation_key
+        return self.request("POST", "/api/v1/reservations", headers=headers, json=data)
 
     def cancel_reservation(self, token, reservation_id, version):
         return self.request(

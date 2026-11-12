@@ -53,11 +53,18 @@ def test_own_reservation_list_is_private_and_escapes_titles(accounts):
     token = csrf(page)
     assert (
         client.post(
-            "/films/film-id/reserver", data={"csrf_token": token, "user_id": "other"}
+            "/films/film-id/reserver",
+            data={
+                "csrf_token": token,
+                "user_id": "other",
+                "operation_key": "synthetic-reservation-key-123456",
+            },
         ).status_code
         == 303
     )
-    api.request_reservation.assert_called_once_with(TOKEN, {"movie_id": "film-id"})
+    api.request_reservation.assert_called_once_with(
+        TOKEN, {"movie_id": "film-id"}, operation_key="synthetic-reservation-key-123456"
+    )
     assert (
         client.post(
             "/reservations/reservation-id/annuler",

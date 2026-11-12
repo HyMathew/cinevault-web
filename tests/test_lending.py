@@ -52,8 +52,14 @@ def test_member_requests_and_cancels_own_pending_loan_with_csrf(accounts):
     assert page.status_code == 200
     assert response_private(page)
     token = csrf(page)
-    assert client.post("/films/film-id/emprunter", data={"csrf_token": token}).status_code == 303
-    api.request_loan.assert_called_once_with(TOKEN, {"movie_id": "film-id"})
+    key = "synthetic-loan-operation-123456"
+    assert (
+        client.post(
+            "/films/film-id/emprunter", data={"csrf_token": token, "operation_key": key}
+        ).status_code
+        == 303
+    )
+    api.request_loan.assert_called_once_with(TOKEN, {"movie_id": "film-id"}, operation_key=key)
     assert (
         client.post(
             "/emprunts/loan-id/annuler", data={"csrf_token": token, "version": '"loan-version"'}

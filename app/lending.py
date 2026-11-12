@@ -1,4 +1,5 @@
 import re
+import secrets
 from datetime import datetime, time, timedelta, timezone
 
 from flask import (
@@ -42,7 +43,27 @@ def require_manager():
 
 @bp.app_context_processor
 def labels():
-    return {"loan_statuses": STATUSES, "reservation_statuses": RESERVATION_STATUSES}
+    return {
+        "loan_statuses": STATUSES,
+        "reservation_statuses": RESERVATION_STATUSES,
+        "lending_operation_key": lambda: secrets.token_urlsafe(32),
+    }
+
+
+def creation_key():
+    keys = request.form.getlist("operation_key")
+    if len(keys) != 1 or not re.fullmatch(r"[A-Za-z0-9_-]{16,128}", keys[0]):
+        abort(400, description="Rouvrez la fiche du film avant de créer une demande.")
+    return keys[0]
+
+
+def uncertain_creation(film_id, kind, key, error):
+    headers = {"Retry-After": str(error.retry_after)} if error.retry_after is not None else {}
+    return (
+        render_template("lending_retry.html", film_id=film_id, kind=kind, operation_key=key),
+        503,
+        headers,
+    )
 
 
 @bp.app_template_filter("utc_date")
@@ -71,7 +92,13 @@ def loan_list():
 @bp.post("/films/<film_id>/emprunter")
 @signed_in
 def request_loan(film_id):
-    api().request_loan(token(), {"movie_id": film_id})
+    key = creation_key()
+    try:
+        api().request_loan(token(), {"movie_id": film_id}, operation_key=key)
+    except APIError as exc:
+        if exc.status != 503:
+            raise
+        return uncertain_creation(film_id, "loan", key, exc)
     flash("Votre demande de prêt a été envoyée à la vidéothèque.")
     return redirect(url_for("lending.loan_list"), code=303)
 
@@ -169,9 +196,12 @@ def reservation_list():
 @bp.post("/films/<film_id>/reserver")
 @signed_in
 def request_reservation(film_id):
+    key = creation_key()
     try:
-        api().request_reservation(token(), {"movie_id": film_id})
+        api().request_reservation(token(), {"movie_id": film_id}, operation_key=key)
     except APIError as exc:
+        if exc.status == 503:
+            return uncertain_creation(film_id, "reservation", key, exc)
         if exc.status != 409:
             raise
         return render_template("reservation_conflict.html", film_id=film_id), 409

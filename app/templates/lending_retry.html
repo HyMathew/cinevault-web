@@ -1,0 +1,6 @@
+{% extends 'base.html' %}{% block title %}Résultat à vérifier · CineVault{% endblock %}
+{% block content %}<section class="form-page"><p class="eyebrow">MON ESPACE</p><h1>Vérifiez votre demande.</h1>
+<p>Le résultat n’a pas pu être confirmé. Votre demande a peut-être été enregistrée. Consultez votre espace avant de réessayer.</p>
+<div class="actions"><a class="button primary" href="{{ url_for('lending.loan_list' if kind=='loan' else 'lending.reservation_list',scope='mine') }}">{{ 'Mes emprunts' if kind=='loan' else 'Mes réservations' }}</a><a class="button secondary" href="{{ url_for('pages.detail',film_id=film_id) }}">Disponibilité du film</a>
+<form method="post" action="{{ url_for('lending.request_loan' if kind=='loan' else 'lending.request_reservation',film_id=film_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="operation_key" value="{{ operation_key }}"><button class="button secondary">Réessayer la même demande</button></form></div>
+</section>{% endblock %}

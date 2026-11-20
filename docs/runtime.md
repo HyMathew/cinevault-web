@@ -6,6 +6,11 @@ Les dépendances applicatives sont exactes dans requirements.txt, avec installat
 
 Le conteneur tourne en UID/GID 10001. Le web ne possède pas le document métier et accède à l'API par HTTP/JSON ; ses clés sont injectées séparément. Les bibliothèques nécessaires à HTTPS et à la compression restent disponibles. Les VM hôtes Ubuntu 24 restent distinctes du système de fichiers Alpine du conteneur.
 
+L'image web partage la base Alpine et la résolution des bibliothèques
+OpenSSL de l'API. Le 20 novembre 2026, le scan de l'API a signalé les
+paquets `libcrypto3` et `libssl3` en `3.5.9-r0`. Le Dockerfile web
+exige leur révision corrigée `3.5.9-r1` sur Alpine 3.24. [Index Alpine](https://pkgs.alpinelinux.org/packages?arch=x86_64&branch=v3.24&name=openssl&repo=main).
+
 ## Décision et validation locale
 
 Le 7 novembre 2026, les scans complets ont refusé l'image Debian initiale, puis une image Python Alpine complète. Une image minimale a ensuite été évaluée dans un contexte isolé avant adoption : vrai HEALTHCHECK, UID 10001, scan Grype 0.121.2 sans avis ignoré, suite complète contre le code contenu dans l'image et intégration HTTP Compose des deux services. Les essais de harnais échoués ont été conservés : exécution d'un venv sur tmpfs noexec, puis oubli des schémas JSON API dans le contexte de test ; aucune modification métier n'a servi à masquer ces erreurs.

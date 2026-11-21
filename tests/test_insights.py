@@ -14,14 +14,14 @@ def test_dashboard_and_recommendation_pages_require_identity(accounts):
             "available": 0,
             "damaged": 0,
             "held_for_queue": 0,
-            "by_support": {},
+            "by_support": dict.fromkeys(("numerique", "dvd", "blu-ray", "vhs", "autre"), 0),
             "by_genre": {},
         },
         "personal": {
             "collection_entries": 0,
             "collection_movies": 0,
-            "by_kind": {},
-            "by_owned_support": {},
+            "by_kind": dict.fromkeys(("owned", "favorite", "watched", "watchlist", "custom"), 0),
+            "by_owned_support": dict.fromkeys(("numerique", "dvd", "blu-ray", "vhs", "autre"), 0),
             "loans": {},
             "overdue": 0,
             "waiting_reservations": 0,
@@ -32,6 +32,9 @@ def test_dashboard_and_recommendation_pages_require_identity(accounts):
     }
     page = client.get("/mon-espace")
     assert page.status_code == 200 and b"Votre espace" in page.data
+    assert "Aucune entrée pour le moment." in page.text
+    assert "Vos films possédés par support" not in page.text
+    assert "Aucun exemplaire." in page.text
     api.statistics.assert_called_once_with(TOKEN, "mine")
     assert page.headers["Cache-Control"] == "no-store"
     assert client.get("/mon-espace?scope=all").status_code == 403

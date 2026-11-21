@@ -35,6 +35,13 @@ Une tentative invalide les anciens reçus avant lancement ; ses erreurs techniqu
 
 Rapports sous `reports/`, exclus de Git et du contexte Docker : résultats d’audits runtime/dev/qualité, construction, santé, identifiant d’image et scan. La date/base du scanner et les versions doivent être conservées avec les résultats. Ces contrôles ne remplacent pas la revue du code, des droits et des secrets.
 
+Le reçu lie l'identifiant Docker à l'archive effectivement lue et au JSON
+Grype. Le contrôle vérifie l'empreinte et les couches de la configuration
+Docker ou du manifeste OCI, puis recalcule l'empreinte de l'archive après le
+scan. L'empreinte de configuration doit aussi correspondre à celle vérifiée
+dans le JSON Grype. Le digest du manifeste reconstruit par Grype est conservé
+séparément du digest OCI.
+
 ## GitHub Actions
 
 Le workflow teste Ubuntu et Windows et audite sur chacun de ces OS les trois ensembles de dépendances, y compris les paquets conditionnels Windows. Il exécute aussi lint/format/docs/contrat puis construit et scanne l'image. Les actions officielles sont fixées à des commits et les identifiants de checkout ne sont pas conservés. Les jobs de qualité, tests et audit d'image ont contents:read. Un job distinct de publication, limité aux événements autorisés sur la branche par défaut, ajoute packages:write. Aucun déploiement du laboratoire n'est automatique. Les rapports sont gardés sept jours, y compris lorsqu'un contrôle échoue.
@@ -46,6 +53,11 @@ Sources des outils : [Ruff](https://docs.astral.sh/ruff/configuration/), [pip-au
 ## Publication des images
 
 Les jobs `quality` et `tests` sur Windows/Ubuntu doivent réussir avant le contrôle d'image sur Ubuntu. Deux jobs d'image sont mutuellement exclusifs : `image`, en lecture seule pour les PR et autres branches ; `publish-image`, pour un push ou lancement manuel de la branche par défaut. Chacun construit l'image, vérifie son démarrage non privilégié, applique le seuil Grype élevé/critique et vérifie son nettoyage. Le second publie ensuite **cette même identité locale** dans GHCR avec `scripts/publish_image.py`, sans reconstruction intermédiaire. Le filtre porte sur le job privilégié entier ; le helper revérifie aussi le contexte.
+
+Avant de se connecter à GHCR, le script recalcule l'empreinte du rapport de
+la tentative et compare sa provenance et son résultat au reçu de contrôle.
+Il conserve cette liaison dans le reçu de publication. L'archive d'image
+temporaire reste sur le runner et est retirée à la fin de la tentative.
 
 Le helper revérifie l'événement, la branche, la révision, le reçu du gate et l'ID local avant toute connexion au registre. Il utilise le jeton temporaire GitHub Actions avec `packages: write`, transmis uniquement à cette étape. L'identification Docker passe par l'entrée standard et un dossier de configuration temporaire supprimé à la sortie ; aucun jeton ne figure dans les arguments ou le reçu. Une nouvelle tentative invalide le précédent reçu avant toute opération Docker.
 

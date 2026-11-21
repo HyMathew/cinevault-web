@@ -3,14 +3,22 @@ import os
 import secrets
 from pathlib import Path
 
-from flask import Flask, abort, request, session
+from flask import Flask, abort, g, request, session
 
 from .api_client import APIClient, APIError
 from .forms import SUPPORTS
+from .telemetry import install_request_telemetry
+
+
+class _WebApplication(Flask):
+    def log_exception(self, exc_info):
+        # Flask logs the concrete path and exception text by default.
+        self.logger.error("Erreur interne pour la requête %s", g.get("cinevault_request_id", "-"))
 
 
 def create_app(config=None):
-    app = Flask(__name__)
+    app = _WebApplication(__name__)
+    install_request_telemetry(app)
     app.config.update(
         SECRET_KEY=os.environ.get("SECRET_KEY"),
         API_URL=os.environ.get("API_URL", "http://cinevault-api:8000"),
@@ -55,8 +63,6 @@ def create_app(config=None):
     def context():
         if "csrf_token" not in session:
             session["csrf_token"] = secrets.token_urlsafe(32)
-        from flask import g
-
         manager = not app.config["ENTERPRISE_ENABLED"] or bool(
             g.get("user") and g.user["role"] in ("manager", "admin")
         )

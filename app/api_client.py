@@ -11,6 +11,7 @@ import requests
 from flask import has_request_context, request
 
 from .response_contracts import _text, allows_no_content, valid_response
+from .telemetry import record_api_request_id
 
 
 def safe_poster(value):
@@ -86,6 +87,7 @@ class APIClient:
             )
         except requests.RequestException as exc:
             raise APIError(503, "Le service de données est indisponible.") from exc
+        record_api_request_id(getattr(response, "headers", {}).get("X-Request-ID"))
         if 300 <= response.status_code < 400:
             raise APIError(503, "Redirection inattendue du service de données.")
         if response.status_code >= 400:

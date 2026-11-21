@@ -29,3 +29,17 @@ distribution et au staging. L'index Alpine x86_64 n'offrait pas de version
 plus récente au moment du contrôle.
 [Index Alpine](https://pkgs.alpinelinux.org/packages?arch=x86_64&branch=v3.24&name=openssl&repo=main).
 [Versions OpenSSL publiées](https://www.openssl-library.org/source/).
+
+## Journaux HTTP
+
+Le service Web écrit une ligne JSON par réponse dans le flux WSGI. Le champ
+`request_id` reprend l’UUIDv4 renvoyé dans `X-Request-ID`, généré à chaque
+requête. Les champs `service`, `method`, `route`, `status` et `duration_ms`
+décrivent le traitement applicatif. La route est le modèle Flask déclaré ou la
+valeur `unmatched`. La durée monotone s'arrête avant l'envoi de la réponse.
+
+`api_request_ids` relie jusqu'à huit réponses de l'API à la requête Web.
+Seuls les UUIDv4 en hexadécimal minuscule reçus de l'API entrent dans ce champ.
+Un échec interne Flask conserve sa réponse 500 et laisse un message fixe avec
+l'identifiant de la requête. Le démarrage Gunicorn laisse son journal d'accès
+natif désactivé. Le contrôle `/health` indique que le processus Web répond.

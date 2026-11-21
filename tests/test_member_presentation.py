@@ -18,6 +18,9 @@ def test_member_catalogue_has_film_links_and_explicit_stock(accounts):
     assert "1 exemplaire" in page
     assert "disponible pour un prêt" not in page
     assert re.search(r'<a[^>]+aria-label="Voir le film : Dune"', page)
+    assert 'action="/films#catalogue-results"' in page
+    assert 'id="catalogue-results" tabindex="-1" role="status"' in page
+    assert len(re.findall(r'href="/films/film-id\?return_to=[^"]+"', page)) == 1
     api.search.assert_called_once_with(include_posters=True)
 
 

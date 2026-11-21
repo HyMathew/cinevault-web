@@ -81,12 +81,31 @@ def test_collection_distinguishes_filtered_empty_from_unfiltered_empty(accounts)
     }
     page = client.get("/ma-collection?kind=custom&list_name=Soirées").get_data(as_text=True)
     assert "Aucune entrée pour ces filtres." in page
+    assert 'name="list_name" value="Soirées"' in page
     assert "Une place pour vos coups de cœur." not in page
     assert 'href="/ma-collection"' in page
     api.collections.assert_called_once_with(TOKEN, kind="custom", list_name="Soirées")
     assert "Une place pour vos coups de cœur." in client.get("/ma-collection").get_data(
         as_text=True
     )
+
+
+def test_favorites_ignore_the_incompatible_named_list_filter(accounts):
+    client, api = accounts
+    client.set_cookie("cinevault_auth", TOKEN)
+    api.collections.return_value = {
+        "entries": [],
+        "movies": {},
+        "total": 0,
+        "offset": 0,
+        "limit": 12,
+    }
+
+    response = client.get("/ma-collection?kind=favorite&list_name=Soirées&limit=12")
+    assert response.status_code == 200
+    assert 'name="list_name"' not in response.text
+    assert 'value="favorite" selected' in response.text
+    api.collections.assert_called_once_with(TOKEN, kind="favorite", limit="12")
 
 
 def test_reservation_personal_context_agrees_for_manager_and_preserves_filters(accounts):

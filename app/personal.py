@@ -34,6 +34,8 @@ def no_cache(response):
 @signed_in
 def collection_list():
     query = request.args.to_dict()
+    if query.get("kind") == "favorite":
+        query.pop("list_name", None)
     return render_template(
         "personal_collection.html", result=api().collections(token(), **query), query=query
     )

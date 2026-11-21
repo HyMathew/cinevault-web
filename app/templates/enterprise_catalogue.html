@@ -6,7 +6,7 @@
   {% if management_view %}<a class="button primary" href="{{ url_for('pages.film_form') }}">Ajouter un film</a>{% endif %}
 </section>
 {% set secondary_active = query.get('genre') or query.get('year') or query.get('support') %}
-<form class="catalogue-search" method="get" action="{{ url_for('pages.catalogue') }}">
+<form class="catalogue-search" method="get" action="{{ url_for('pages.catalogue', _anchor='catalogue-results') }}">
   {% if management_view %}<input type="hidden" name="view" value="manage">{% endif %}
   {% if query.get('limit') %}<input type="hidden" name="limit" value="{{ query['limit'] }}">{% endif %}
   <div class="search-field"><label for="q">Rechercher</label><input id="q" name="q" value="{{ query.get('q','') }}" maxlength="200" placeholder="Titre, réalisateur ou acteur"></div>
@@ -23,7 +23,7 @@
   <div class="sort-field"><label for="sort">Trier par</label><select id="sort" name="sort">{% for value,label in [('title','Titre A–Z'),('-title','Titre Z–A'),('year','Année croissante'),('-year','Année décroissante')] %}<option value="{{ value }}"{% if query.get('sort','title') == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="button secondary">Trier</button></div>
   {% if query.get('q') or secondary_active or query.get('sort','title') != 'title' %}<a class="reset" href="{{ url_for('pages.catalogue',view='manage') if management_view else url_for('pages.catalogue') }}">Effacer les filtres</a>{% endif %}
 </form>
-<p class="result-line" role="status">{{ total }} film{{ 's' if total != 1 else '' }}{% if films and (offset or total > films|length) %} · {{ offset+1 }} à {{ offset+films|length }}{% endif %}</p>
+<p class="result-line" id="catalogue-results" tabindex="-1" role="status">{{ total }} film{{ 's' if total != 1 else '' }}{% if films and (offset or total > films|length) %} · {{ offset+1 }} à {{ offset+films|length }}{% endif %}</p>
 {% if films %}
   {% if management_view %}
   <div class="table-scroll"><table class="inventory-table"><caption class="visually-hidden">Films de la vidéothèque</caption><thead><tr><th scope="col">Film</th><th scope="col">Réalisateur</th><th scope="col">Année</th><th scope="col">Exemplaires</th></tr></thead><tbody>{% for film in films %}<tr><th scope="row"><a href="{{ url_for('pages.detail',film_id=film.id,return_to=url_for('pages.catalogue',**query)) }}">{{ film.titre }}</a></th><td><span class="cell-label">Réalisateur : </span>{{ film.realisateur }}</td><td><span class="cell-label">Année : </span>{{ film.annee }}</td><td><span class="cell-label">Exemplaires : </span>{{ film.copy_count }}{% if film.copy_supports %} · {% for support in film.copy_supports %}{{ supports.get(support,support) }}{{ ', ' if not loop.last else '' }}{% endfor %}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
@@ -31,7 +31,7 @@
   <ul class="film-results">
     {% for film in films %}<li class="film-result">
       <div class="result-artwork">{% if film.poster %}{% set poster=film.poster %}{% set poster_title=film.titre %}{% include 'poster.html' %}{% else %}{% include '_poster_fallback.html' %}{% endif %}</div>
-      <div class="result-content"><h2><a href="{{ url_for('pages.detail',film_id=film.id,return_to=url_for('pages.catalogue',**query)) }}">{{ film.titre }}</a></h2><p>{{ film.realisateur }} · {{ film.annee }} · {{ film.copy_count }} exemplaire{{ 's' if film.copy_count != 1 else '' }}{% if film.copy_supports %} · {% for support in film.copy_supports %}{{ supports.get(support,support) }}{{ ', ' if not loop.last else '' }}{% endfor %}{% endif %}</p><a class="button primary" href="{{ url_for('pages.detail',film_id=film.id,return_to=url_for('pages.catalogue',**query)) }}" aria-label="Voir le film : {{ film.titre }}">Voir le film</a></div>
+      <div class="result-content"><h2>{{ film.titre }}</h2><p>{{ film.realisateur }} · {{ film.annee }} · {{ film.copy_count }} exemplaire{{ 's' if film.copy_count != 1 else '' }}{% if film.copy_supports %} · {% for support in film.copy_supports %}{{ supports.get(support,support) }}{{ ', ' if not loop.last else '' }}{% endfor %}{% endif %}</p><a class="button primary" href="{{ url_for('pages.detail',film_id=film.id,return_to=url_for('pages.catalogue',**query)) }}" aria-label="Voir le film : {{ film.titre }}">Voir le film</a></div>
     </li>{% endfor %}
   </ul>
   {% endif %}

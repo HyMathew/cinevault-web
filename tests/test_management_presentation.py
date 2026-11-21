@@ -159,6 +159,10 @@ def test_admin_rows_keep_individual_labeled_forms_and_empty_state(management):
     assert 'class="member-admin-row"' in page
     assert 'action="/administration/utilisateurs/account-id"' in page
     assert 'for="role-account-id"' in page and 'for="enabled-account-id"' in page
+    assert 'aria-labelledby="account-name-account-id account-username-account-id"' in page
+    username = api.me.return_value["username"]
+    assert f'Rôle<span class="visually-hidden"> du compte {username}</span>' in page
+    assert f'Statut<span class="visually-hidden"> du compte {username}</span>' in page
 
 
 def test_transfer_sections_keep_uncertain_import_key_and_options(management):

@@ -18,3 +18,14 @@ Le 7 novembre 2026, les scans complets ont refusé l'image Debian initiale, puis
 Le dernier scan local a trouvé zéro High/Critical, cinq Medium et un Low, avec la base Grype datée du 7 novembre. Le seuil High/Critical est inchangé ; tous les avis restent dans le rapport. Ce résultat n'est pas une preuve d'absence de vulnérabilité et devra être renouvelé au build de livraison. Les vérifications locales ne constituent pas une exécution GitHub Actions ou un déploiement Swarm.
 
 Les scripts et commandes de revalidation sont décrits dans [quality.md](quality.md). Les données, clés et archives de laboratoire restent hors du dépôt et du contexte de construction.
+
+## Contrôle frais du 21 novembre 2026
+
+Grype 0.121.2, base du 21 novembre à 06 h 20 UTC, a refusé le build local de
+staging. Cinq nouveaux avis High concernent les deux paquets `libcrypto3` et
+`libssl3` en `3.5.9-r1`, soit dix correspondances. Le démarrage sous UID 10001
+et le nettoyage ont réussi. Le seuil High/Critical reste le prérequis à la
+distribution et au staging. L'index Alpine x86_64 n'offrait pas de version
+plus récente au moment du contrôle.
+[Index Alpine](https://pkgs.alpinelinux.org/packages?arch=x86_64&branch=v3.24&name=openssl&repo=main).
+[Versions OpenSSL publiées](https://www.openssl-library.org/source/).

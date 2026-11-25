@@ -1,6 +1,7 @@
 FROM python:3.13-alpine@sha256:1e1f6334529d1fb26a2ef619d7cffb30a7c7d7cc1cc7338ebee283a58d1aeaca AS python-runtime
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir --no-compile --only-binary=:all: -r /tmp/requirements.txt && \
+COPY docker/python-runtime.txt /tmp/python-runtime.txt
+RUN pip install --no-cache-dir --no-compile --only-binary=:all: --require-hashes -r /tmp/python-runtime.txt && \
+    pip check && \
     rm -rf /usr/local/lib/python3.13/sqlite3 /usr/local/lib/python3.13/lib-dynload/_sqlite3*.so
 
 FROM alpine:3.24@sha256:3f4d6b32e26703c6082839234f43769d5046b3ac7c910033911d1e71d8cd630a AS alpine-packages

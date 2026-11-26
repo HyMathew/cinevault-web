@@ -120,7 +120,7 @@ summary { cursor: pointer; min-height: 44px; border: 1px solid var(--control-bor
   .result-content p { font-size: 15px; margin-bottom: 16px; }
   .result-content .button { padding-inline: 12px; }
   .poster-fallback { padding: 10px 8px; gap: 10px; }
-  .fallback-title { font-size: 16px; -webkit-line-clamp: 3; }
+  .fallback-title { display: none; }
   .fallback-note { font-size: 11px; }
   .fallback-note::before { margin-bottom: 10px; width: 28px; }
   .footer { flex-direction: row; flex-wrap: wrap; }

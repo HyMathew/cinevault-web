@@ -75,6 +75,9 @@ Les grilles utilisent `minmax(0,1fr)` et le retour à la ligne pour les titres,
 noms et références longs. Sous 850 px, plusieurs grilles deviennent une colonne
 et la navigation passe par le menu natif ; sous 600 px, les formulaires se
 réorganisent ; sous 350 px, affiche et contenu du catalogue se superposent.
+À 600 px ou moins, l’affiche de remplacement conserve la mention
+« Affiche non disponible ». Le titre complet reste dans le catalogue
+et l’en-tête de la fiche.
 Le tableau de gestion est réorganisé sur petit écran avec libellés visibles.
 Contrôler 320, 390, 768 et 1280 px, textes longs, états vides et erreurs : ces
 largeurs sont des points de vérification, pas une garantie universelle de reflow.

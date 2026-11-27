@@ -96,6 +96,16 @@ Conserver la règle `prefers-reduced-motion: reduce` existante.
 
 ## États métier et médias
 
+La fiche place l’état du stock et l’action de prêt avant les crédits de
+l’affiche dans l’ordre clavier. Le nombre d’exemplaires et leurs supports
+sont visibles dans ce bloc. Un film sans exemplaire reste réservable dans
+la file. L’entrée dans la collection est distincte du prêt.
+
+La fiche présente jusqu’à quatre films apparentés et indique le réalisateur
+ou les genres communs. Ces raisons proviennent du même instantané public
+du catalogue. L’absence de relation se traduit par l’absence de cette
+section. Le parcours Découvrir reste celui des suggestions personnelles.
+
 Distinguer catalogue vide, filtres sans résultat, refus confirmé et résultat
 incertain. Une réponse 503 après création peut suivre une écriture réussie :
 la [reprise de prêt/réservation](docs/lending-recovery.md) conserve film, action

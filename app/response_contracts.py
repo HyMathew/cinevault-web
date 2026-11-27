@@ -67,6 +67,26 @@ def _movie(value):
     )
 
 
+def related_movies(value, movie_id):
+    if not isinstance(value, list) or len(value) > 4:
+        return []
+    return [
+        movie
+        for movie in value
+        if _fields(
+            movie,
+            id=_text,
+            title=_text,
+            year=_integer,
+            director=_text,
+            shared_genres=_array(_text),
+            same_director=_boolean,
+        )
+        and movie["id"] != movie_id
+        and (movie["shared_genres"] or movie["same_director"])
+    ]
+
+
 def _legacy_movie(value):
     return _fields(
         value,

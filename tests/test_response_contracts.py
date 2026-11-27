@@ -252,6 +252,54 @@ def test_null_genres_is_rejected_before_rendering_movie(monkeypatch):
     assert web_client(True).get("/films/synthetic-movie").status_code == 503
 
 
+def test_detail_projects_public_related_films_with_explicit_reasons(monkeypatch):
+    peer = {
+        "id": "other-film",
+        "title": "Autre film",
+        "year": 2025,
+        "director": "Auteur",
+        "shared_genres": ["Drame"],
+        "same_director": False,
+    }
+    transport(
+        monkeypatch,
+        {
+            ("GET", "/api/v1/movies/synthetic-movie"): (
+                200,
+                {
+                    **MOVIE,
+                    "related": [
+                        peer,
+                        {**peer, "id": MOVIE["id"]},
+                        {**peer, "id": "unrelated", "shared_genres": []},
+                    ],
+                },
+            ),
+            ("GET", "/api/v1/copies"): (200, {"copies": []}),
+            ("GET", "/api/v1/availability"): (200, {"available": 0}),
+        },
+    )
+    response = web_client(True).get("/films/synthetic-movie?return_to=/films%3Fq%3DSynthetic")
+    assert response.status_code == 200
+    section = response.text.split('aria-labelledby="related-title"', 1)[1]
+    assert "Autre film" in section and "Genre en commun : Drame" in section
+    assert "return_to=/films?q%3DSynthetic" in section
+    assert "/films/unrelated" not in section and "/films/synthetic-movie" not in section
+
+
+def test_detail_with_an_old_api_can_render_without_the_related_projection(monkeypatch):
+    transport(
+        monkeypatch,
+        {
+            ("GET", "/api/v1/movies/synthetic-movie"): (200, MOVIE),
+            ("GET", "/api/v1/copies"): (200, {"copies": []}),
+            ("GET", "/api/v1/availability"): (200, {"available": 0}),
+        },
+    )
+    page = web_client(True).get("/films/synthetic-movie")
+    assert page.status_code == 200 and "Films apparentés" not in page.text
+
+
 def test_malformed_creation_preserves_fields_and_never_replays_post(monkeypatch):
     calls = transport(monkeypatch, {("POST", "/api/films"): (201, {})})
     client = web_client()

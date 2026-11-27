@@ -93,6 +93,34 @@ def test_film_primary_action_precedes_synopsis_and_management(accounts):
     assert 'name="csrf_token"' in page
 
 
+def test_film_detail_displays_stock_and_keeps_collection_out_of_lending(accounts):
+    client, api = accounts
+    setup_catalogue(api)
+    api.get.return_value = {**FILM, "availability": {"available": 1}}
+    client.set_cookie("cinevault_auth", TOKEN)
+
+    page = client.get("/films/film-id").text
+    borrowing = page.split('aria-labelledby="borrowing-title"', 1)[1].split("</section>", 1)[0]
+    assert "1 exemplaire · Blu-ray" in borrowing
+    assert "1 disponible hors réservations." in borrowing
+    assert "Demander un prêt" in borrowing
+    assert "Ajouter à ma collection" not in borrowing
+    assert page.index("Demander un prêt") < page.index('class="detail-artwork"')
+    assert "Ajouter à ma collection" in page
+    api.get.assert_called_once_with("film-id", include_related=True)
+
+
+def test_film_without_inventory_can_still_join_the_reservation_queue(accounts):
+    client, api = accounts
+    setup_catalogue(api)
+    api.get.return_value = {**FILM, "copy_count": 0, "copies": [], "copy_supports": []}
+    client.set_cookie("cinevault_auth", TOKEN)
+    page = client.get("/films/film-id").text
+    assert "Aucun exemplaire enregistré. Une réservation vous place dans la file d’attente." in page
+    assert "Réserver ce film" in page
+    assert "Demander un prêt" not in page
+
+
 def test_filtered_catalogue_return_stays_local(accounts):
     client, api = accounts
     setup_catalogue(api)

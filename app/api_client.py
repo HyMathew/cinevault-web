@@ -10,7 +10,7 @@ from urllib.parse import quote, urlsplit
 import requests
 from flask import has_request_context, request
 
-from .response_contracts import _text, allows_no_content, valid_response
+from .response_contracts import _text, allows_no_content, related_movies, valid_response
 from .telemetry import record_api_request_id
 
 
@@ -138,12 +138,16 @@ class APIClient:
         except (KeyError, TypeError) as exc:
             raise APIError(503, "Réponse invalide du service de données.") from exc
 
-    def get(self, film_id):
+    def get(self, film_id, *, include_related=False):
         try:
             if self.enterprise:
-                movie = self.request("GET", "/api/v1/movies/" + quote(film_id, safe=""))
+                path = "/api/v1/movies/" + quote(film_id, safe="")
+                projection = {"params": {"include": "related"}} if include_related else {}
+                movie = self.request("GET", path, **projection)
                 copies = self.copies(film_id)
                 view = self.movie_view(movie, copies=copies)
+                if include_related:
+                    view["related"] = related_movies(movie.get("related"), film_id)
                 view["availability"] = self.request(
                     "GET", "/api/v1/availability", params={"movie_id": film_id}
                 )

@@ -106,7 +106,7 @@ def quick_search():
 
 @pages.get("/films/<film_id>")
 def detail(film_id):
-    film = api().get(film_id)
+    film = api().get(film_id, include_related=True) if enterprise() else api().get(film_id)
     if film is None:
         abort(404)
     own_reservations = {"reservations": [], "positions": {}, "ready_ids": [], "open_loan_ids": {}}

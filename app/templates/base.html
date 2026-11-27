@@ -6,6 +6,7 @@
   <title>{% block title %}CineVault{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  {% if config.ENTERPRISE_ENABLED %}<script src="{{ url_for('static', filename='quick-search.js') }}" defer></script>{% endif %}
 </head>
 {% set enterprise = config.ENTERPRISE_ENABLED %}
 {% set management = enterprise and can_manage and (management_view|default(false) or request.endpoint in ['pages.film_form', 'pages.copy_form', 'pages.delete', 'transfer.catalogue', 'accounts.administration', 'metadata.search', 'metadata.preview', 'lending.approve'] or (request.endpoint in ['lending.loan_list', 'lending.reservation_list'] and request.args.get('scope') != 'mine') or (request.endpoint == 'insights.dashboard' and request.args.get('scope') == 'all')) %}
@@ -14,6 +15,12 @@
   <header class="header">
     <div class="nav wrap">
       <a class="brand" href="{{ url_for('pages.home') }}">CineVault</a>
+      {% if enterprise %}
+        <a id="quick-search-fallback" class="quick-search-trigger" href="{{ url_for('pages.catalogue') }}#q">Rechercher</a>
+        <button id="quick-search-trigger" class="quick-search-trigger" type="button" aria-haspopup="dialog" aria-controls="quick-search" aria-keyshortcuts="Control+K Meta+K" hidden>
+          Rechercher <kbd aria-hidden="true">Ctrl K</kbd>
+        </button>
+      {% endif %}
       {% include '_navigation.html' %}
     </div>
   </header>
@@ -21,6 +28,7 @@
     {% for message in get_flashed_messages() %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
     {% block content %}{% endblock %}
   </main>
+  {% if enterprise %}{% include '_quick_search.html' %}{% endif %}
   <footer class="wrap footer"><span class="footer-brand">CineVault</span>{% if enterprise %}<span>Vidéothèque collaborative</span>{% else %}<a href="{{ url_for('pages.simple') }}">Page simple</a>{% endif %}</footer>
 </body>
 </html>

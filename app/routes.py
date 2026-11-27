@@ -7,6 +7,7 @@ from flask import (
     current_app,
     flash,
     g,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -73,6 +74,34 @@ def catalogue():
     q = request.args.get("q", "").strip()
     support = request.args.get("support", "")
     return render_template("catalogue.html", films=api().list(q, support), q=q, support=support)
+
+
+@pages.get("/recherche/films")
+def quick_search():
+    if not enterprise():
+        abort(404)
+    values = request.args.getlist("q")
+    if set(request.args) != {"q"} or len(values) != 1:
+        abort(422)
+    query = values[0].strip()
+    if not 2 <= len(query) <= 200 or len(query.casefold()) > 200:
+        abort(422)
+    result = api().search(q=query, limit=5)
+    catalogue_url = url_for("pages.catalogue", q=query)
+    response = jsonify(
+        films=[
+            {
+                "title": film["titre"],
+                "year": film["annee"],
+                "director": film["realisateur"],
+                "url": url_for("pages.detail", film_id=film["id"], return_to=catalogue_url),
+            }
+            for film in result["films"][:5]
+        ],
+        total=result["total"],
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @pages.get("/films/<film_id>")

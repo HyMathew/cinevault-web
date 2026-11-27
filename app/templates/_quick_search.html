@@ -1,0 +1,38 @@
+<dialog id="quick-search" class="quick-search" aria-labelledby="quick-search-title" data-suggestions="{{ url_for('pages.quick_search') }}">
+  <div class="quick-search-heading">
+    <h2 id="quick-search-title">Recherche rapide</h2>
+    <button class="button secondary" type="button" data-close>Fermer</button>
+  </div>
+  <form class="quick-search-form" action="{{ url_for('pages.catalogue') }}" method="get" role="search" aria-label="Films">
+    <div>
+      <label for="quick-search-query">Titre, réalisateur ou acteur</label>
+      <input type="search" id="quick-search-query" name="q" autocomplete="off" maxlength="200" aria-describedby="quick-search-hint" autofocus>
+    </div>
+    <button type="submit" class="button primary">Voir les résultats</button>
+  </form>
+  <p id="quick-search-hint">Suggestions dès deux caractères. Utilisez la flèche bas pour les parcourir.</p>
+  <p id="quick-search-status" role="status"></p>
+  <ul id="quick-search-films" class="quick-search-films" aria-label="Films trouvés" hidden></ul>
+  <nav class="quick-search-links" aria-label="Accès rapide">
+    <h3>Aller à</h3>
+    <ul>
+      <li><a href="{{ url_for('pages.catalogue') }}">Catalogue</a></li>
+      {% if g.user %}
+        <li><a href="{{ url_for('personal.collection_list') }}">Ma collection</a></li>
+        <li><a href="{{ url_for('lending.loan_list', scope='mine') }}">Mes emprunts</a></li>
+        <li><a href="{{ url_for('lending.reservation_list', scope='mine') }}">Mes réservations</a></li>
+        <li><a href="{{ url_for('insights.discover') }}">Découvrir</a></li>
+      {% else %}
+        <li><a href="{{ url_for('accounts.login') }}">Connexion</a></li>
+      {% endif %}
+      {% if can_manage %}
+        <li><a href="{{ url_for('pages.catalogue', view='manage') }}">Inventaire</a></li>
+        <li><a href="{{ url_for('pages.film_form') }}">Nouveau film</a></li>
+        <li><a href="{{ url_for('lending.reservation_list', scope='all') }}">Toutes les réservations</a></li>
+        {% if g.user.role == 'admin' %}
+          <li><a href="{{ url_for('accounts.administration') }}">Administration</a></li>
+        {% endif %}
+      {% endif %}
+    </ul>
+  </nav>
+</dialog>

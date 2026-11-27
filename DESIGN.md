@@ -66,6 +66,14 @@ Les [champs répétés](app/templates/_list_fields.html) sont des formulaires
 serveur : préserver leurs valeurs originales et leur cycle ajouter/retirer.
 Aucun JavaScript frontend supplémentaire n'est nécessaire pour ces parcours.
 
+La recherche rapide Enterprise ouvre un dialogue natif par le bouton
+« Rechercher », avec Ctrl+K ou ⌘K. Échap ou « Fermer » restitue le focus.
+Les suggestions présentent jusqu’à cinq films publics après une pause de
+frappe de 250 ms et se parcourent avec Tab ou les flèches. Les destinations sont rendues par Jinja selon le rôle
+courant, et leurs routes vérifient les droits à chaque accès. Le formulaire
+conduit au catalogue complet. Sans JavaScript, le lien du même nom mène
+directement au champ de recherche du catalogue.
+
 Garder l'ordre du document cohérent avec Tab/Shift+Tab/Entrée, le focus visible
 de 3 px décalé de 3 px, les libellés d'action explicites et les messages proches
 des champs. La couleur seule ne doit pas porter un état. Vérifier réellement le

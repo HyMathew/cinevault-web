@@ -1,4 +1,70 @@
-{% extends 'base.html' %}{% block title %}Administration · CineVault{% endblock %}
-{% block content %}<header class="workspace-head"><h1>Les membres.</h1><p>{{ accounts.total }} compte{{ 's' if accounts.total != 1 else '' }} dans la vidéothèque. Un changement de rôle ou de statut ferme les sessions du compte concerné.</p></header>
-<section class="member-admin-list" aria-label="Gestion des comptes">{% for account in accounts.users %}<article class="member-admin-row"><div class="admin-identity"><h2 id="account-name-{{ account.id }}">{{ account.display_name }}</h2><p id="account-username-{{ account.id }}">{{ account.username }}</p></div><form class="admin-controls" aria-labelledby="account-name-{{ account.id }} account-username-{{ account.id }}" method="post" action="{{ url_for('accounts.admin_update', user_id=account.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="field"><label for="role-{{ account.id }}">Rôle<span class="visually-hidden"> du compte {{ account.username }}</span></label><select id="role-{{ account.id }}" name="role">{% for role,label in [('member','Membre'),('manager','Gestionnaire'),('admin','Administrateur')] %}<option value="{{ role }}" {% if account.role == role %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="field"><label for="enabled-{{ account.id }}">Statut<span class="visually-hidden"> du compte {{ account.username }}</span></label><select name="enabled" id="enabled-{{ account.id }}"><option value="true" {% if account.enabled %}selected{% endif %}>Actif</option><option value="false" {% if not account.enabled %}selected{% endif %}>Désactivé</option></select></div><button class="button secondary">Enregistrer pour {{ account.username }}</button></form></article>{% else %}<div class="empty"><h2>Aucun compte à afficher.</h2><p>Aucun résultat n’a été fourni pour cette page.</p></div>{% endfor %}
-<nav class="actions" aria-label="Pagination des comptes">{% if accounts.offset > 0 %}<a class="button secondary" href="{{ url_for('accounts.administration', offset=[0,accounts.offset-accounts.limit]|max) }}">Précédent</a>{% endif %}{% if accounts.offset+accounts.limit < accounts.total %}<a class="button secondary" href="{{ url_for('accounts.administration', offset=accounts.offset+accounts.limit) }}">Suivant</a>{% endif %}</nav></section>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Administration · CineVault{% endblock %}
+{% block content %}
+<header class="workspace-head">
+  <h1>Les membres.</h1>
+  <p>Un changement de rôle ou de statut ferme les sessions du compte concerné.</p>
+</header>
+<form class="filters workspace-filters directory-filters" method="get" action="{{ url_for('accounts.administration') }}">
+  <div>
+    <label for="member-prefix">Début de l’identifiant</label>
+    <input id="member-prefix" name="prefix" type="search" value="{{ filters.get('prefix','') }}" maxlength="32">
+  </div>
+  <div>
+    <label for="member-role">Rôle</label>
+    <select id="member-role" name="role">
+      <option value="">Tous les rôles</option>
+      {% for role,label in [('member','Membre'),('manager','Gestionnaire'),('admin','Administrateur')] %}
+        <option value="{{ role }}"{% if filters.get('role') == role %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="member-enabled">Statut</label>
+    <select id="member-enabled" name="enabled">
+      <option value="">Tous les statuts</option>
+      <option value="true"{% if filters.get('enabled') == 'true' %} selected{% endif %}>Actifs</option>
+      <option value="false"{% if filters.get('enabled') == 'false' %} selected{% endif %}>Désactivés</option>
+    </select>
+  </div>
+  <button class="button primary">Filtrer les comptes</button>
+  {% if filters %}<a href="{{ url_for('accounts.administration') }}">Effacer les filtres</a>{% endif %}
+</form>
+<p class="result-line" id="accounts-results">
+  {{ accounts.total }} compte{{ 's' if accounts.total != 1 else '' }}{% if accounts.users and (accounts.offset or accounts.total > accounts.users|length) %} · {{ accounts.offset+1 }} à {{ accounts.offset+accounts.users|length }}{% endif %}
+</p>
+<section class="member-admin-list" aria-label="Gestion des comptes">
+  {% for account in accounts.users %}
+    <article class="member-admin-row">
+      <div class="admin-identity"><h2 id="account-name-{{ account.id }}">{{ account.display_name }}</h2><p id="account-username-{{ account.id }}">{{ account.username }}</p></div>
+      <form class="admin-controls" aria-labelledby="account-name-{{ account.id }} account-username-{{ account.id }}" method="post" action="{{ url_for('accounts.admin_update', user_id=account.id, **context) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="field">
+          <label for="role-{{ account.id }}">Rôle<span class="visually-hidden"> du compte {{ account.username }}</span></label>
+          <select id="role-{{ account.id }}" name="role">
+            {% for role,label in [('member','Membre'),('manager','Gestionnaire'),('admin','Administrateur')] %}
+              <option value="{{ role }}" {% if account.role == role %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="enabled-{{ account.id }}">Statut<span class="visually-hidden"> du compte {{ account.username }}</span></label>
+          <select name="enabled" id="enabled-{{ account.id }}">
+            <option value="true" {% if account.enabled %}selected{% endif %}>Actif</option>
+            <option value="false" {% if not account.enabled %}selected{% endif %}>Désactivé</option>
+          </select>
+        </div>
+        <button class="button secondary">Enregistrer pour {{ account.username }}</button>
+      </form>
+    </article>
+  {% else %}
+    <div class="empty"><h2>Aucun compte à afficher.</h2><p>{{ 'Essayez un autre identifiant, rôle ou statut.' if filters else 'Aucun résultat n’a été fourni pour cette page.' }}</p></div>
+  {% endfor %}
+  {% if accounts.offset or accounts.offset+accounts.limit < accounts.total %}
+    <nav class="actions pagination" aria-label="Pagination des comptes">
+      {% if accounts.offset > 0 %}<a class="button secondary" href="{{ url_for('accounts.administration', offset=[0,accounts.offset-accounts.limit]|max, **filters) }}">Précédent</a>{% endif %}
+      {% if accounts.offset+accounts.limit < accounts.total %}<a class="button secondary" href="{{ url_for('accounts.administration', offset=accounts.offset+accounts.limit, **filters) }}">Suivant</a>{% endif %}
+    </nav>
+  {% endif %}
+</section>
+{% endblock %}

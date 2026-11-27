@@ -209,6 +209,54 @@ def test_admin_forms_relay_only_allowed_fields(accounts):
     api.update_user.assert_called_once_with(TOKEN, "user-id", {"role": "manager", "enabled": True})
 
 
+@pytest.mark.parametrize("conflict", [False, True])
+def test_admin_filters_and_page_survive_update_or_conflict(accounts, conflict):
+    client, api = accounts
+    api.me.return_value = {**PROFILE, "role": "admin"}
+    api.users.return_value = {"users": [PROFILE], "total": 120, "limit": 50, "offset": 50}
+    client.set_cookie("cinevault_auth", TOKEN)
+    query = "offset=50&prefix=AL&role=member&enabled=true"
+    page = client.get("/administration?" + query)
+    assert page.status_code == 200
+    assert "120 comptes · 51 à 51" in page.text
+    assert 'name="prefix" type="search" value="al"' in page.text
+    assert "offset=100&amp;prefix=al&amp;role=member&amp;enabled=true" in page.text
+    api.users.assert_called_once_with(TOKEN, 50, prefix="al", role="member", enabled="true")
+    if conflict:
+        api.update_user.side_effect = APIError(409, "Dernier administrateur")
+    response = client.post(
+        "/administration/utilisateurs/user-id?" + query,
+        data={"csrf_token": csrf(page), "role": "manager", "enabled": "true"},
+    )
+    assert response.status_code == 303
+    assert (
+        response.headers["Location"]
+        == "/administration?offset=50&prefix=al&role=member&enabled=true"
+    )
+    api.update_user.assert_called_once_with(TOKEN, "user-id", {"role": "manager", "enabled": True})
+
+
+def test_admin_page_can_return_to_last_page_after_filter_result_shrinks(accounts):
+    client, api = accounts
+    api.me.return_value = {**PROFILE, "role": "admin"}
+    api.users.return_value = {"users": [], "total": 50, "limit": 50, "offset": 50}
+    client.set_cookie("cinevault_auth", TOKEN)
+    response = client.get("/administration?offset=50&role=manager")
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/administration?role=manager"
+
+
+def test_manager_cannot_query_directory_and_admin_filters_are_bounded(accounts):
+    client, api = accounts
+    client.set_cookie("cinevault_auth", TOKEN)
+    api.me.return_value = {**PROFILE, "role": "manager"}
+    assert client.get("/administration?prefix=cine").status_code == 403
+    api.me.return_value = {**PROFILE, "role": "admin"}
+    for query in ("prefix=.*", "enabled=1", "role=owner", "offset=10001", "role=member&role=admin"):
+        assert client.get("/administration?" + query).status_code == 422
+    api.users.assert_not_called()
+
+
 def test_non_ascii_csrf_is_rejected_and_security_headers_present(accounts):
     client, api = accounts
     client.get("/connexion")

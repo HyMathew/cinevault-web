@@ -21,6 +21,7 @@ from .api_client import APIError
 bp = Blueprint("accounts", __name__)
 COOKIE = "cinevault_auth"
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_-]{20,128}")
+DIRECTORY_PREFIX = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,31}")
 
 
 def api():
@@ -183,11 +184,11 @@ def password():
     return clear_auth(redirect(url_for("accounts.login"), code=303))
 
 
-@bp.get("/administration")
-@signed_in
-def administration():
-    if g.user["role"] != "admin":
-        abort(403)
+def directory_query():
+    if set(request.args) - {"offset", "prefix", "role", "enabled"} or any(
+        len(values) != 1 for _, values in request.args.lists()
+    ):
+        abort(422)
     offset = request.args.get("offset", "0")
     if (
         not 1 <= len(offset) <= 5
@@ -196,7 +197,39 @@ def administration():
         or not 0 <= int(offset) <= 10000
     ):
         abort(422)
-    return render_template("account_admin.html", accounts=api().users(token(), int(offset)))
+    prefix = request.args.get("prefix", "").strip()
+    role = request.args.get("role", "")
+    enabled = request.args.get("enabled", "")
+    if (
+        (prefix and not DIRECTORY_PREFIX.fullmatch(prefix))
+        or role not in ("", "member", "manager", "admin")
+        or enabled not in ("", "true", "false")
+    ):
+        abort(422)
+    filters = {
+        key: value
+        for key, value in (("prefix", prefix.lower()), ("role", role), ("enabled", enabled))
+        if value
+    }
+    return int(offset), filters
+
+
+@bp.get("/administration")
+@signed_in
+def administration():
+    if g.user["role"] != "admin":
+        abort(403)
+    offset, filters = directory_query()
+    accounts = api().users(token(), offset, **filters)
+    if offset and not accounts["users"] and offset >= accounts["total"]:
+        last_offset = max(0, (accounts["total"] - 1) // accounts["limit"] * accounts["limit"])
+        return redirect(url_for("accounts.administration", offset=last_offset or None, **filters))
+    return render_template(
+        "account_admin.html",
+        accounts=accounts,
+        filters=filters,
+        context=filters | ({"offset": offset} if offset else {}),
+    )
 
 
 @bp.post("/administration/utilisateurs/<user_id>")
@@ -204,12 +237,15 @@ def administration():
 def admin_update(user_id):
     if g.user["role"] != "admin":
         abort(403)
+    offset, filters = directory_query()
     if (
         set(request.form) != {"csrf_token", "role", "enabled"}
+        or any(len(values) != 1 for _, values in request.form.lists())
         or request.form["enabled"] not in ("true", "false")
         or request.form["role"] not in ("member", "manager", "admin")
     ):
         abort(422)
+    destination = url_for("accounts.administration", offset=offset or None, **filters)
     try:
         api().update_user(
             token(),
@@ -219,10 +255,10 @@ def admin_update(user_id):
     except APIError as exc:
         if exc.status == 409:
             flash("Le dernier administrateur actif doit être conservé.")
-            return redirect(url_for("accounts.administration"), code=303)
+            return redirect(destination, code=303)
         raise
     flash("Compte mis à jour. Ses sessions ont été révoquées si ses droits ont changé.")
-    return redirect(url_for("accounts.administration"), code=303)
+    return redirect(destination, code=303)
 
 
 def install_accounts(app):

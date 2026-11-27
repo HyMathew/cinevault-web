@@ -276,6 +276,14 @@ summary { cursor: pointer; min-height: 44px; border: 1px solid var(--control-bor
 .compact-editor { max-width: 680px; margin-top: 4px; }
 .compact-editor > .button { margin: 4px 8px 8px 0; }
 .member-admin-list { border-top: 1px solid var(--line); }
+.directory-filters { grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)) auto; }
+.directory-filters > a { grid-column: 1 / -1; }
+@media (max-width: 850px) {
+  .directory-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .directory-filters { grid-template-columns: minmax(0, 1fr); }
+}
 .member-admin-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,2fr); gap: 32px; align-items: center; padding: 24px 0; border-bottom: 1px solid var(--line); }
 .admin-identity { min-width: 0; overflow-wrap: anywhere; }
 .admin-identity h2 { font-size: 25px; margin-bottom: 6px; }

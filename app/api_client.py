@@ -401,8 +401,10 @@ class APIClient:
     def change_password(self, token, data):
         return self.account_request(token, "PUT", "/me/password", json=data)
 
-    def users(self, token, offset=0):
-        return self.account_request(token, "GET", "/users", params={"limit": 50, "offset": offset})
+    def users(self, token, offset=0, **filters):
+        return self.account_request(
+            token, "GET", "/users", params={"limit": 50, "offset": offset, **filters}
+        )
 
     def update_user(self, token, user_id, data):
         return self.account_request(token, "PATCH", "/users/" + quote(user_id, safe=""), json=data)

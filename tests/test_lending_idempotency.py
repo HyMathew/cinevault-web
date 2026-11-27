@@ -67,12 +67,11 @@ def test_uncertain_create_keeps_identity_for_one_manual_retry(accounts, action, 
     assert b"private upstream details" not in response.data and TOKEN.encode() not in response.data
     create.assert_called_once_with(TOKEN, {"movie_id": "film-id"}, operation_key=key)
     create.side_effect = None
-    assert (
-        client.post(
-            endpoint, data={"csrf_token": csrf(response), "operation_key": operation_key(response)}
-        ).status_code
-        == 303
+    confirmed = client.post(
+        endpoint, data={"csrf_token": csrf(response), "operation_key": operation_key(response)}
     )
+    assert confirmed.status_code == 303
+    assert confirmed.headers["Location"] == list_path
     assert create.call_count == 2
     assert create.call_args.kwargs == {"operation_key": key}
 

@@ -16,10 +16,18 @@ signalée que lorsque l’API en compte réellement. Les totaux retournés et an
 la collection, l’activité retenue et le catalogue restent accessibles ; les
 répartitions secondaires utilisent `details` natif.
 
+Les compteurs des retours et des annulations ouvrent l’historique personnel
+filtré. Un résultat vide sous filtre de statut permet de retirer ce filtre en
+conservant le périmètre, le film et la taille de page. La confirmation d’une
+demande de prêt ou de réservation mène également à l’espace personnel.
+
 Les listes de collection présentent le type, le titre complet et les opérations
 existantes dans une même ligne sur ordinateur, puis dans le flux sur mobile.
 Un filtre sans résultat se distingue d’une collection sans entrée. Les titres,
 noms de liste et noms affichés longs restent lisibles et échappés par Jinja.
+La collection donne un accès direct aux films à voir, aux prêts en cours et à
+l’historique. Un nom de liste s’applique à la recherche générale et aux listes
+personnelles. Changer vers une catégorie sans nom écarte ce filtre.
 Les versions d’entrée, jetons CSRF et permissions de l’API restent les autorités
 pour chaque mutation. Le formulaire ne transforme pas un conflit de version en
 écrasement automatique.

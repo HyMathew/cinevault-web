@@ -158,6 +158,10 @@ summary { cursor: pointer; min-height: 44px; border: 1px solid var(--control-bor
 .catalogue-metrics > div { flex-basis: 130px; }
 .subtle-line { display: flex; gap: 12px 24px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 15px; }
 .subtle-line a { min-height: 44px; display: inline-flex; align-items: center; }
+.collection-shortcuts { flex-basis: 100%; row-gap: 0; }
+@media (min-width: 851px) {
+  .workspace-filters.collection-filters-kind-only { grid-template-columns: minmax(0, 1fr) auto auto; }
+}
 .count-list, .activity-list { list-style: none; padding: 0; margin: 16px 0; }
 .count-list li { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .count-list a { min-height: 44px; display: inline-flex; align-items: center; }

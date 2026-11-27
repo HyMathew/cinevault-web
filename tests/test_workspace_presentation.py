@@ -3,6 +3,7 @@
 import re
 from html import unescape
 
+import pytest
 from test_accounts import PROFILE, TOKEN
 from test_accounts import accounts as accounts
 from test_personal import ENTRY
@@ -47,6 +48,8 @@ def test_dashboard_prioritizes_personal_actions_and_scopes_links(accounts):
     assert 'aria-label="Voir mes prêts en cours : 1"' in page
     assert 'aria-label="Voir mes demandes en attente : 2"' in page
     assert 'aria-label="Voir mes réservations en attente : 3"' in page
+    assert 'href="/emprunts?scope=mine&amp;status=returned"' in page
+    assert 'href="/emprunts?scope=mine&amp;status=cancelled"' in page
     api.statistics.assert_called_once_with(TOKEN, "mine")
 
 
@@ -90,7 +93,8 @@ def test_collection_distinguishes_filtered_empty_from_unfiltered_empty(accounts)
     )
 
 
-def test_favorites_ignore_the_incompatible_named_list_filter(accounts):
+@pytest.mark.parametrize("kind", ["favorite", "watchlist", "watched", "owned"])
+def test_collection_categories_ignore_the_incompatible_named_list_filter(accounts, kind):
     client, api = accounts
     client.set_cookie("cinevault_auth", TOKEN)
     api.collections.return_value = {
@@ -101,11 +105,47 @@ def test_favorites_ignore_the_incompatible_named_list_filter(accounts):
         "limit": 12,
     }
 
-    response = client.get("/ma-collection?kind=favorite&list_name=Soirées&limit=12")
+    response = client.get(
+        "/ma-collection", query_string={"kind": kind, "list_name": "Soirées", "limit": 12}
+    )
     assert response.status_code == 200
     assert 'name="list_name"' not in response.text
-    assert 'value="favorite" selected' in response.text
-    api.collections.assert_called_once_with(TOKEN, kind="favorite", limit="12")
+    assert f'value="{kind}" selected' in response.text
+    api.collections.assert_called_once_with(TOKEN, kind=kind, limit="12")
+
+
+def test_collection_shortcuts_are_personal_even_for_a_manager(accounts):
+    client, api = accounts
+    client.set_cookie("cinevault_auth", TOKEN)
+    api.me.return_value = {**PROFILE, "role": "manager"}
+    api.collections.return_value = {
+        "entries": [],
+        "movies": {},
+        "total": 0,
+        "offset": 0,
+        "limit": 24,
+    }
+    response = client.get("/ma-collection", query_string={"list_name": "Soirées"})
+    assert response.status_code == 200
+    assert 'name="list_name" value="Soirées"' in response.text
+    assert 'href="/ma-collection?kind=watchlist"' in response.text
+    assert 'href="/emprunts?scope=mine&amp;status=active"' in response.text
+    assert 'href="/emprunts?scope=mine"' in response.text
+    assert 'aria-label="Raccourcis de ma collection"' in response.text
+
+
+def test_empty_personal_loan_filter_can_be_removed_without_losing_the_scope(accounts):
+    client, api = accounts
+    client.set_cookie("cinevault_auth", TOKEN)
+    api.me.return_value = {**PROFILE, "role": "manager"}
+    response = client.get("/emprunts?scope=mine&status=active&movie_id=film-id&limit=12&offset=24")
+    assert response.status_code == 200
+    assert "Aucun prêt ne correspond à ces filtres." in response.text
+    assert 'href="/emprunts?scope=mine&amp;movie_id=film-id&amp;limit=12"' in response.text
+    assert "GESTION DE LA VIDÉOTHÈQUE" not in response.text
+    api.loans.assert_called_once_with(
+        TOKEN, scope="mine", status="active", movie_id="film-id", limit="12", offset="24"
+    )
 
 
 def test_reservation_personal_context_agrees_for_manager_and_preserves_filters(accounts):

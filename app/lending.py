@@ -100,7 +100,7 @@ def request_loan(film_id):
             raise
         return uncertain_creation(film_id, "loan", key, exc)
     flash("Votre demande de prêt a été envoyée à la vidéothèque.")
-    return redirect(url_for("lending.loan_list"), code=303)
+    return redirect(url_for("lending.loan_list", scope="mine"), code=303)
 
 
 @bp.route("/emprunts/<loan_id>/valider", methods=["GET", "POST"])
@@ -206,7 +206,7 @@ def request_reservation(film_id):
             raise
         return render_template("reservation_conflict.html", film_id=film_id), 409
     flash("Votre réservation a été enregistrée dans la file d’attente.")
-    return redirect(url_for("lending.reservation_list"), code=303)
+    return redirect(url_for("lending.reservation_list", scope="mine"), code=303)
 
 
 @bp.post("/reservations/<reservation_id>/annuler")

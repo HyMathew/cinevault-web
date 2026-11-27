@@ -14,7 +14,11 @@
     <div><dt>Réservations en attente</dt><dd><a href="{{ url_for('lending.reservation_list',scope='mine',status='waiting') }}" aria-label="Voir mes réservations en attente : {{ result.personal.waiting_reservations }}">{{ result.personal.waiting_reservations }}</a></dd></div>
   </dl>
   {% if result.personal.overdue %}<p class="notice">{{ result.personal.overdue }} prêt{{ 's' if result.personal.overdue!=1 else '' }} en retard. <a href="{{ url_for('lending.loan_list',scope='mine',status='active') }}">Consulter les échéances</a></p>{% endif %}
-  <div class="subtle-line"><span>Retournés : {{ result.personal.loans.get('returned',0) }}</span><span>Annulés : {{ result.personal.loans.get('cancelled',0) }}</span><a href="{{ url_for('lending.reservation_list',scope='mine') }}">Mes réservations</a></div>
+  <div class="subtle-line">
+    <a href="{{ url_for('lending.loan_list',scope='mine',status='returned') }}">Retournés : {{ result.personal.loans.get('returned',0) }}</a>
+    <a href="{{ url_for('lending.loan_list',scope='mine',status='cancelled') }}">Annulés : {{ result.personal.loans.get('cancelled',0) }}</a>
+    <a href="{{ url_for('lending.reservation_list',scope='mine') }}">Mes réservations</a>
+  </div>
 </section>
 <div class="workspace-columns">
   <section class="workspace-section" aria-labelledby="personal-collection">

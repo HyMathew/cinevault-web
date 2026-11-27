@@ -34,10 +34,15 @@ def no_cache(response):
 @signed_in
 def collection_list():
     query = request.args.to_dict()
-    if query.get("kind") == "favorite":
+    kind = query.get("kind", "")
+    show_list_name = kind in ("", "custom")
+    if not show_list_name and kind in KINDS:
         query.pop("list_name", None)
     return render_template(
-        "personal_collection.html", result=api().collections(token(), **query), query=query
+        "personal_collection.html",
+        result=api().collections(token(), **query),
+        query=query,
+        show_list_name=show_list_name,
     )
 
 

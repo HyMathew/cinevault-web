@@ -143,6 +143,83 @@ def web_client(enterprise=False):
     return app.test_client()
 
 
+def catalogue_transport(monkeypatch, replies):
+    calls = []
+    remaining = iter(replies)
+
+    def send(method, url, *, params, **kwargs):
+        calls.append((method, url, params))
+        status, payload = next(remaining)
+
+        class Response:
+            headers = {}
+            status_code = status
+
+            def json(self):
+                return payload
+
+        return Response()
+
+    monkeypatch.setattr("requests.request", send)
+    return calls
+
+
+@pytest.mark.parametrize(
+    "value,visible", [(0, True), (1, True), (2, False), (True, False), (-1, False), ("1", False)]
+)
+def test_catalogue_uses_only_an_available_count_for_this_film(monkeypatch, value, visible):
+    movie_id = MOVIE["id"]
+    body = {
+        **MOVIES,
+        "movies": [MOVIE],
+        "copy_summaries": {movie_id: {"count": 1, "supports": ["dvd"]}},
+        "availability": {movie_id: value, "other-film": 1},
+        "total": 1,
+    }
+    calls = catalogue_transport(monkeypatch, [(200, body)])
+    result = web_client(True).get("/films?support=dvd")
+    assert result.status_code == 200
+    assert ("Disponibilité à vérifier" not in result.text) is visible
+    assert calls == [
+        (
+            "GET",
+            "http://offline.invalid/api/v1/movies",
+            {"support": "dvd", "include": "availability"},
+        )
+    ]
+
+
+def test_previous_api_rejects_only_opt_in_and_catalogue_retries_read(monkeypatch):
+    film = {
+        **MOVIES,
+        "movies": [MOVIE],
+        "total": 1,
+        "copy_summaries": {MOVIE["id"]: {"count": 1, "supports": ["dvd"]}},
+    }
+    rejected = {
+        "error": {"message": "Données invalides.", "fields": {"query": "Paramètres invalides."}}
+    }
+    calls = catalogue_transport(monkeypatch, [(422, rejected), (200, film)])
+    result = web_client(True).get("/films?q=Synthetic")
+    assert result.status_code == 200 and "Disponibilité à vérifier" in result.text
+    assert calls == [
+        (
+            "GET",
+            "http://offline.invalid/api/v1/movies",
+            {"q": "Synthetic", "include": "availability"},
+        ),
+        ("GET", "http://offline.invalid/api/v1/movies", {"q": "Synthetic"}),
+    ]
+
+
+def test_availability_opt_in_keeps_real_filter_errors_visible(monkeypatch):
+    rejected = {"error": {"message": "Données invalides.", "fields": {"limit": "Valeur invalide."}}}
+    calls = catalogue_transport(monkeypatch, [(422, rejected)])
+    result = web_client(True).get("/films?limit=101")
+    assert result.status_code == 422
+    assert len(calls) == 1
+
+
 @pytest.mark.parametrize(
     "payload",
     [[], {**MOVIES, "offset": None}, {**MOVIES, "movies": [{"id": "missing-title"}]}],

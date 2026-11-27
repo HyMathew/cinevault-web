@@ -16,12 +16,36 @@ def test_member_catalogue_has_film_links_and_explicit_stock(accounts):
     assert "Voir le film" in page
     assert "Affiche non disponible" in page
     assert "1 exemplaire" in page
-    assert "disponible pour un prêt" not in page
+    assert "Disponibilité à vérifier sur la fiche" in page
+    assert "Aucun exemplaire libre hors réservations" not in page
     assert re.search(r'<a[^>]+aria-label="Voir le film : Dune"', page)
     assert 'action="/films#catalogue-results"' in page
     assert 'id="catalogue-results" tabindex="-1" role="status"' in page
     assert len(re.findall(r'href="/films/film-id\?return_to=[^"]+"', page)) == 1
-    api.search.assert_called_once_with(include_posters=True)
+    api.search.assert_called_once_with(include_posters=True, include_availability=True)
+
+
+def test_catalogue_displays_public_availability_in_both_views(accounts):
+    client, api = accounts
+    setup_catalogue(api)
+    zero = {**FILM, "id": "zero", "titre": "Autre film", "available_count": 0}
+    api.search.return_value = {
+        "films": [{**FILM, "available_count": 1}, zero],
+        "total": 2,
+        "limit": 24,
+        "offset": 0,
+    }
+    api.me.return_value = {**PROFILE, "role": "manager"}
+    client.set_cookie("cinevault_auth", TOKEN)
+    for view in ("member", "manage"):
+        page = client.get("/films", query_string={"view": view})
+        assert page.status_code == 200
+        assert "1 disponible hors réservations" in page.text
+        assert "Aucun exemplaire libre hors réservations" in page.text
+        assert 'href="/films/zero?' in page.text
+        assert "Disponibilité à vérifier" not in page.text
+    api.loans.assert_not_called()
+    api.reservations.assert_not_called()
 
 
 def test_management_view_is_authorized_and_never_sent_to_api(accounts):
@@ -39,7 +63,9 @@ def test_management_view_is_authorized_and_never_sent_to_api(accounts):
         r'href="[^"]*view=manage[^"]*genre=Drame[^"]*offset=24"[^>]*>Suivant',
         page.get_data(as_text=True),
     )
-    api.search.assert_called_once_with(include_posters=True, genre="Drame", sort="-year")
+    api.search.assert_called_once_with(
+        include_posters=True, include_availability=True, genre="Drame", sort="-year"
+    )
     assert client.get("/films?view=unknown").status_code == 422
     assert client.get("/films?view=manage&view=manage").status_code == 422
 

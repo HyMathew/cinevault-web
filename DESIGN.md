@@ -17,7 +17,10 @@ de lecture vidéo. La vidéothèque organise des œuvres et leurs exemplaires.
 La [vue membre du catalogue](app/templates/enterprise_catalogue.html) privilégie
 des lignes avec affiche, titre lisible et accès à la fiche. La vue de gestion
 `view=manage`, réservée aux rôles autorisés, utilise un inventaire plus dense
-avec réalisateur, année et exemplaires. Le rôle ne force pas toute navigation
+avec réalisateur, année et exemplaires. Les deux vues distinguent le nombre
+d’exemplaires du nombre encore disponible pour un prêt, tous supports
+confondus. En l’absence d’un nombre exploitable, le texte invite à vérifier
+sur la fiche. Le rôle ne force pas toute navigation
 dans la vue de gestion : les parcours personnels gardent `scope=mine`.
 
 L'espace membre présente d'abord prêts, réservations et collection ; les

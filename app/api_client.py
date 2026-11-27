@@ -230,13 +230,29 @@ class APIClient:
             result["external_id"] = data["external_id"]
         return result
 
-    def search(self, include_posters=False, **query):
-        result = self.request(
-            "GET", "/api/v1/movies", params={k: v for k, v in query.items() if v != ""}
-        )
+    def search(self, include_posters=False, *, include_availability=False, **query):
+        params = {key: value for key, value in query.items() if value != ""}
+        if include_availability:
+            try:
+                result = self.request(
+                    "GET", "/api/v1/movies", params={**params, "include": "availability"}
+                )
+            except APIError as exc:
+                # Older APIs reject the unknown include parameter before reading any films.
+                if exc.status != 422 or exc.fields != {"query": "Paramètres invalides."}:
+                    raise
+                result = self.request("GET", "/api/v1/movies", params=params)
+        else:
+            result = self.request("GET", "/api/v1/movies", params=params)
         films = [
             self.movie_view(m, summary=result["copy_summaries"][m["id"]]) for m in result["movies"]
         ]
+        availability = result.get("availability")
+        if include_availability and isinstance(availability, dict):
+            for film in films:
+                count = availability.get(film["id"])
+                if type(count) is int and 0 <= count <= film["copy_count"]:
+                    film["available_count"] = count
         if include_posters:
             posters = self.posters([film["id"] for film in films if film.get("external_source")])
             for film in films:

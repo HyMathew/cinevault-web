@@ -67,7 +67,7 @@ def catalogue():
         if view == "manage":
             require_manager()
         api_query = {key: value for key, value in query.items() if key != "view"}
-        result = api().search(include_posters=True, **api_query)
+        result = api().search(include_posters=True, include_availability=True, **api_query)
         return render_template(
             "enterprise_catalogue.html", **result, query=query, management_view=view == "manage"
         )
